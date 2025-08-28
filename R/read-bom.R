@@ -1,0 +1,71 @@
+# read BOM
+
+# use:
+# read_bom(bom_file) para ter um arquivo com a bom extraida do XPert
+#
+# use:
+# build_bom("F000999", bom) para obter uma bom de um item
+#
+# use:
+# get_itens_of_bom(a_specific_bom, system_item) para obter uma lista das materias primas da bom
+
+read_bom <- function(bom_file) {
+  bom <- readxl::read_excel(bom_file) |>
+    janitor::clean_names()
+}
+
+get_bom_component <- function(material){
+  material |>
+    select(bom_component) |>
+    pull()
+}
+
+get_component_base <- function(component, bom){
+  component |>
+    map(~ bom |> filter(material_number == .)) |>
+    reduce(bind_rows)
+}
+
+get_bom_from_id <- function(id, bom) {
+  id = "F00717002041A"
+  upper_bom <-
+    bom |>
+    filter(material_number == id)
+
+  final_bom <- upper_bom
+  sub_bom <- upper_bom
+
+  while(nrow(sub_bom) != 0){
+    sub_bom <-
+      get_bom_component(upper_bom) |>
+      get_component_base(bom)
+
+    if(nrow(sub_bom)){
+      final_bom <-
+        final_bom |>
+        bind_rows(sub_bom)
+      upper_bom <- sub_bom
+    }
+  }
+  final_bom  <-
+    final_bom |>
+    mutate(estabelecimento = ifelse(plant == "SPB", 103, ifelse(plant == "SPI", 102, NA))) |>
+    mutate(comp_qtty = (as.numeric(str_replace_all(component_quantity, "[[:punct:]]", ""))))
+}
+
+
+get_itens_of_bom <- function(bom, itens) {
+  components <-
+    bom |> pull(bom_component)
+
+  bom_itens <-
+    bom_itens |>
+    select(id = tetenr,
+           desc,
+           grupo_estoque,
+           fam_mat = familia,
+           fam_com = teprgr,
+           un,
+           estabelecimento,
+           cod_complementar = tezinr)
+}
