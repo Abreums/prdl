@@ -27,7 +27,7 @@ get_component_base <- function(component, bom){
 }
 
 get_bom_from_id <- function(id, bom) {
-  id = "F00717002041A"
+  id = "F00717002045A"
   upper_bom <-
     bom |>
     filter(material_number == id)
@@ -55,11 +55,23 @@ get_bom_from_id <- function(id, bom) {
 
 
 get_itens_of_bom <- function(bom, itens) {
-  components <-
+  # bom <- f3040
+
+  main_finish_product <-
+    bom |>
+    filter(str_detect(material_number, "^F")) |>
+    distinct(material_number, plant)
+  main_finish_product_plant <-
+    main_finish_product |> pull(plant)
+  estabelecimento <-
+    ifelse(main_finish_product_plant == "SPI", 102, ifelse(main_finish_product_plant == "SPB", 103, NA))
+
+  bom_components <-
     bom |> pull(bom_component)
 
   bom_itens <-
-    bom_itens |>
+    itens |>
+    filter(tetenr %in% bom_components) |>
     select(id = tetenr,
            desc,
            grupo_estoque,

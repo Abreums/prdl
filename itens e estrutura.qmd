@@ -1,0 +1,196 @@
+---
+title: "Itens e Estruturas"
+author: "Simoldes"
+---
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(readxl)
+library(here)
+library(cellranger)
+library(gdata)
+
+```
+
+### Ler informações de itens: Matéria Prima, Componentes, Semi-acabados (I) e acabados (F)
+
+```{r}
+
+source("R/read-itens.R")
+
+filename_itens <- here("data", "Artigos 2025-07-08.xlsx")
+itens <- read_itens(filename_itens)
+
+itens |> 
+  #filter(str_detect(tetenr, "^42")) |>
+  select(tetenr, temagr, mat_group_desc, desc, familia) |> 
+  View()
+
+f <- 
+  itens |> filter(str_detect(tetenr, "^F"))
+f |> View()
+
+f |> filter(str_detect(tetenr, "F00717002041A")) |> View()
+```
+
+## Ler estruturas de BoM e BoP
+
+```{r}
+
+source("R/read-bom.R")
+source("R/read-bop.R")
+
+file_bom <- here::here("data", "BOM 2025-06-11.xlsx")
+
+file_bop_spi <- here::here("data", "BOP SPI 2025-07-20.xlsx")
+file_bop_spb <- here::here("data", "BOP SPB 2025-07-20.xlsx")
+
+bom <- read_bom(file_bom)
+
+file_bom |> View()
+
+# F02516005002B  - 638435RA0A
+# F02516004002B - 638425RA0A
+
+f5002 <- build_bom("F02516005002B", bom)
+f5002 |> View()
+f4002 <- build_bom("F02516004002B", bom)
+f4002 |> View()
+
+bop_spb <- read_bop(file_bop_spb)
+bop_spi <- read_bop(file_bop_spi)
+
+bop_spb |> View()
+
+```
+
+## Preparar arquivo para importar em massa BoM e BoP
+
+Vamos trabalhar com 4 itens do JIT VW:
+
+2GP 868 010 C BSE F00717002041A PNL TRAS DIR T-CROSS DOOR PANEL TITAN COOL RR
+
+2GP 867 006 L AAM F00717003040A PNL DIAN DIR T-CROSS DOOR PAINEL W/LIGH/CHIM FR
+
+2GP 868 009 C BSE F00717002040A PNL TRAS ESQ T-CROSS DOOR PANEL TITAN COOL RL
+
+2GP 867 005 M AAM F00717002045A PNL DIAN ESQ T-CROSS DOOR PAINEL W/LIGHT/CRE FL
+
+```{r}
+
+
+import_data <- 
+  f |> 
+  filter(tetenr %in% c("F00717002041A", 
+                       "F00717003040A",
+                       "F00717002040A", 
+                       "F00717002045A")) |> 
+  filter(empresa == "SPB")
+
+
+f3040 <- get_bom_from_id("F00717003040A", bom)
+f3040 |> View()
+f3040_itens <- get_itens_of_bom(f3040, itens)
+f2041_itens |> # valida com anti-join se todos os itens da BOM 
+  anti_join(bom, join_by(id == bom_component))
+
+```
+
+Para identificar os itens vigentes vamos seguir com a seguinte estratégia:
+
+1.  A partir dos relatórios de Pedidos em Carteira (2025), vamos identificar a lista de peças ativas.
+2.  itens faturados (2023 a 2025) e
+3.  A partir da lista de peças produzidas e as BOMs vamos identificar todas as Matérias Primas e Componentes
+4.  
+5.  Faremos as Cargas das Matérias Primas e Componentes, das peças intermediárias e das peças finais.
+
+## 1. Fonte: Pedidos em Carteira
+
+Vamos seguir:
+
+1.  Obter Pedidos em Carteira e filtrar itens
+
+    1.  Classificar itens por cliente
+    2.  É preciso validar os itens por cliente para tirar fora os itens...
+
+```{r}
+source("R/carteira-pedidos.R")
+
+pedidos <- get_order_history()
+
+pedidos |> glimpse()
+
+pedidos |> distinct(item) |> nrow()
+
+pedidos |> filter(str_detect(item, "F00717002041A"))
+
+pedidos |> distinct(item) |> View()
+
+
+recent_orders <- 
+  pedidos |> 
+  filter(!customer %in% c("BELLS INDUSTRIA", 
+                          "BIOPLASTICOS",
+                          "CEMAS DO BRASIL",
+                          "FAURECIA",
+                          "FAURECIA AUTOMOT. BRASIL",
+                          "FWC GANCHEIRAS",
+                          "HB - SMR LOCACAO DE",
+                          "HB SMR SP 0008-73",
+                          "INDUSERVICE SERVICOS",
+                          "KUNST",
+                          "LINKPLAS IND.PLASTIC",
+                          "MADIS CONFECCOES",
+                          "NEW TECH COMPANY",
+                          "NILKO TECNOLOGIA LTD",
+                          "OMEGA RECYCLING",
+                          "PKS PLASTICOS",
+                          "PLASMAPLAST",
+                          "SIMOLDES ACOS BRASIL",
+                          "SIMOLDES PLASTICOS",
+                          "SPI",
+                          "SUMMA POLIMEROS"
+                          ))
+
+recent_orders <- 
+  recent_orders |> 
+  group_by(customer_number, customer, doca_code, doca_desc, customers_part_no, item, desc) |> 
+  summarise(order_date = max(order_date), .groups = "drop")
+
+recent_orders |> distinct(item) |> nrow()
+
+```
+
+1.  Obter Relatório faturado e filtrar itens
+
+    1.  Classificar itens por cliente
+
+    2.  Filtrar?
+
+```{r}
+source("R/read-vendas.R")
+
+spb_vendas <- get_itens_from_branch("SPB")
+spb_vendas <- spb_vendas |> select(item)|> mutate(filial = "SPI")
+
+spi_vendas <- get_itens_from_branch("SPI")
+spi_vendas <- spi_vendas |> select(item) |> mutate(filial = "SPI")
+
+vendas <- rbind(spb_vendas, spi_vendas) |> 
+  distinct(item, filial)
+vendas |>  count(item, sort = TRUE) |> View()
+vendas |> glimpse()
+
+
+```
+
+### Join Vendas com Recent Orders
+
+```{r}
+
+f_para_importar <- 
+recent_orders |> full_join(vendas)
+
+f_para_importar |> View()
+```
