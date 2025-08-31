@@ -24,7 +24,20 @@ itens <- read_itens(filename_itens)
 
 mp <- 
 itens |> 
-  #filter(str_detect(tetenr, "^42")) |>
+        filter(!str_detect(tetenr, "^E1")) |>
+      filter(!str_detect(tetenr, "^E2")) |>
+      filter(!str_detect(tetenr, "^F0")) |>
+      filter(!str_detect(tetenr, "^FA")) |>
+      filter(!str_detect(tetenr, "^IO")) |>
+      filter(!str_detect(tetenr, "^LM")) |>
+      filter(!str_detect(tetenr, "^LP")) |>
+      filter(!str_detect(tetenr, "^MA")) |>
+      filter(!str_detect(tetenr, "^MO")) |>
+      filter(!str_detect(tetenr, "^R1")) |>
+      filter(!str_detect(tetenr, "^R2")) |>
+      filter(!str_detect(tetenr, "^SE")) |>
+      filter(!str_detect(tetenr, "^SP")) |>
+      filter(!str_detect(tetenr, "^V1")) |>
   select(tetenr, temagr, mat_group_desc, desc, familia) |> 
   filter(!str_detect(tetenr, "^F")) |> 
   filter(!str_detect(tetenr, "^I")) |> 
@@ -35,9 +48,10 @@ mp |> write.csv("mp.csv")
 
   View()
 
-f <- 
-  itens |> filter(str_detect(tetenr, "^F"))
-f |> nrow()
+fi <- 
+  itens |> filter(str_detect(tetenr, "^F") | str_detect(tetenr, "^I"))
+fi |> nrow()
+fi |> View()
 
 f |> filter(str_detect(tetenr, "F00717002041A")) |> View()
 ```
@@ -260,4 +274,3 @@ to_imp_itens |>
 ```
 
 ## 
-

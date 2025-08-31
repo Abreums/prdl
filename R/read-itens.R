@@ -10,32 +10,18 @@ read_itens <- function(filename_itens) {
     itens <-
       readxl::read_excel(filename_itens) |>
       janitor::clean_names() |>
-      mutate(estabelecimento = ifelse(empresa == "SPB", "103", "102") |>
+      mutate(estabelecimento = ifelse(empresa == "SPB", "103", "102")) |>
       mutate(tebez1 = ifelse(is.na(tebez1), " ", stringr::str_squish(tebez1)),
              tebez2 = ifelse(is.na(tebez2), " ", stringr::str_squish(tebez2)),
-             desc = stringr::str_c(tebez1, " "), tebez2) |>
-               stringr::str_squish(),
+             desc = stringr::str_c(tebez1, " ", tebez2) |> stringr::str_squish(),
              desc2 = stringr::str_squish(tebez2))
     itens <-
       itens |>
     mutate(un = case_when(
-      unit_measure == "PCs" ~   "PC"),
-      unit_measure == "Unit" ~   "UN"),
+      unit_measure == "PCs" ~   "PC",
+      unit_measure == "Unit" ~   "UN",
       TRUE ~ unit_measure)) |>
-      filter(!str_detect(tetenr, "^E1")) |>
-      filter(!str_detect(tetenr, "^E2")) |>
-      filter(!str_detect(tetenr, "^F0")) |>
-      filter(!str_detect(tetenr, "^FA")) |>
-      filter(!str_detect(tetenr, "^IO")) |>
-      filter(!str_detect(tetenr, "^LM")) |>
-      filter(!str_detect(tetenr, "^LP")) |>
-      filter(!str_detect(tetenr, "^MA")) |>
-      filter(!str_detect(tetenr, "^MO")) |>
-      filter(!str_detect(tetenr, "^R1")) |>
-      filter(!str_detect(tetenr, "^R2")) |>
-      filter(!str_detect(tetenr, "^SE")) |>
-      filter(!str_detect(tetenr, "^SP")) |>
-      filter(!str_detect(tetenr, "^V1")) |>
+
     mutate(
       grupo_estoque = case_when(
         tipo_de_materiais == "Raw materials" ~ "30",
