@@ -81,3 +81,16 @@ get_itens_of_bom <- function(bom, itens) {
            estabelecimento,
            cod_complementar = tezinr)
 }
+
+get_mp_cmp_from_item_bom <- function(item_bom) {
+  mp_comp <-
+    item_bom |>
+    select(bom_component) |>
+    filter(!str_detect(bom_component, "^I")) |>
+    filter(!str_detect(bom_component, "^F")) |>
+    filter(!str_detect(bom_component, "^E1")) |>
+    filter(!str_detect(bom_component, "^E2")) |>
+    filter(!str_detect(bom_component, "^R1")) |>
+    filter(!str_detect(bom_component, "^V1")) |>
+    distinct(bom_component)
+}

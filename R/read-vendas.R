@@ -1,6 +1,6 @@
 
 read_venda <- function(filename) {
-  #filename = "./reports/vendas/SPB/2024-07-31 SPB.xlsx"
+  #filename = "./docs/reports/vendas/SPB/2024-07-31 SPB.xlsx"
   date_string <- str_extract(filename, "\\d{4}-\\d{2}-\\d{2}")
 
   abas <- readxl::excel_sheets(filename)
@@ -21,7 +21,7 @@ read_venda <- function(filename) {
 }
 
 get_files <- function(path) {
-  #path = "./reports/vendas/SPB"
+  path = "./docs/reports/vendas/SPB"
   files_list <-
     list.files(path = path,
                full.names = TRUE)
@@ -29,7 +29,7 @@ get_files <- function(path) {
 
 get_itens_from_branch <- function(branch){
   itens <-
-    get_files(str_c("./reports/vendas/", branch)) |>
+    get_files(str_c("./docs/reports/vendas/", branch)) |>
     map(read_venda) |>
     reduce(bind_rows) |>
     mutate(ano = str_sub(projeto, start = 5, end = 6),
@@ -38,8 +38,9 @@ get_itens_from_branch <- function(branch){
 
 
 get_clientes_from_branch <- function(branch) {
+  #branch <- "SPB"
   clientes <-
-    get_files(str_c("./reports/vendas/", branch)) |>
+    get_files(str_c("./docs/reports/vendas/", branch)) |>
     map(read_venda) |>
     reduce(bind_rows) |>
     distinct(cliente)
