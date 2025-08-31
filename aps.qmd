@@ -1,0 +1,244 @@
+---
+title: "APS"
+author: "Simoldes"
+format: html
+editor: visual
+---
+
+## Planejamento da Produção
+
+APS é o módulo para o planejamento da produção.
+
+### DB0106 Manutenção de Itens Manufatura
+
+Não há botão de inclusão. Os itens precisam vir do ERP.
+
+O campo "ativos" é determinado pelo nível de obsolescência definido no ERP.
+
+NMB (onível mais baixo do item dentro da árvore): nível 0 indica mais alto.
+
+#### Parâmetros do ERP
+
+Vamos analisar primeiro a aba "Parâmetros do ERP".
+
+![Parâmetros do ERP](./images/aps/db0106-2.png){width="500"}
+
+Os dados da aba "Parâmetros ERP" são importados do ERP.
+
+-   Estoque de Segurança: Quantidade ou Tempo
+
+    -   Qual é o valor do estoque de segurança do item?
+
+    -   Há um produto otimizador do estoque no Datasul que calcula o otimizador do estoque.
+
+-   Resuprimentos:
+
+    -   Importante para itens comprados.
+
+-   Fator Refugo e Qtde Perda
+
+    -   considerando a produção.
+
+-   Prioridade:
+
+    -   para desempatar itens
+
+-   Antecipação:
+
+    -   999 -
+
+    -   zero - data atul
+
+-   Lote Mínimo, Lote Múltiplo, Lote Econômico
+
+-   Divide ordem:
+
+    -   Não divide
+
+    -   Lote Múltiplo
+
+    -   Lote Econômico
+
+    -   Lote Mínimo
+
+        -   útil para itens que trabalham por batelada.
+
+-   Quantidade Fracionada
+
+    -   Importante para itens que **não** trabalham com quantidade fracionada. Como parafusos, porcas, arruelas, etc.
+
+-   Horizonte Fixo:
+
+    -   Horizonte em que não mexemos nas ordens.
+
+        -   Uma vez criada a ordem não mexe mais.
+
+-   Política:
+
+    -   Período Fixo (MTS no Proteus)
+
+        -   Disponibiliza campo "Período Fixo".
+
+        -   Define horizonte de x dias e traz para o primeiro dia.
+
+            -   Se há necessidade no dia 15, dia 18, etc...
+
+            -   Traz todas (dentro do período definido) para o dia 15
+
+        -   Atenção: quanto menor, maior giro, menos dinheiro no estoque, porém maior custo de setup.
+
+    -   Lote Econômico:
+
+        -   útil para produtos importados
+
+        -   Por exemplo: tamanho do container de importação.
+
+    -   Ordem:
+
+        -    Trabalha com ordem dedicada mesmo se houver estoque.
+
+    -   Nível Superior (MTO no Proteus):
+
+        -   Se houver estoque não abre ordem.
+
+    -   Configurado:
+
+        -   No ERP, o configurador de produto, permite criar um "kit" (exemplo: shampoo e condicionador).
+
+        -   A venda é pelo kit, não no item.
+
+    -   Real Consumo:
+
+        -   Usando os dados da Aba APS:
+
+            -   estoque mínimo
+
+            -   velocidade de pico de consumo
+
+            -   Usa os princípios do Kanban
+
+Obs.: Real Consumo e Estoque de Segurança geram conflito, não devem ser configurados juntos.
+
+#### Parâmetros do APS
+
+![Parâmetros do APS](./images/aps/db0106-1.png){alt="Parâmetros do APS" width="500"}
+
+-   Malha:
+
+    -   Todo item deve estar vinculado a uma malha (ver DB0101)
+
+-   Pulmão Expedição
+
+-   Pulmão Máquina
+
+-   Programação por lote:
+
+    -   Importante para quando queremos dividir (split) a programação
+
+-   Matéria Prima Restritiva
+
+    -   Se este item é comprado, vamos considerar que o lead time dele será considerado?
+
+-   Não confirma Ordens no ERP
+
+    -   Para itens muito caros, queremos ter o controle das compras:
+
+        -   Na hora que eu descarrego ele para dentro do ERP, não queremos que seja gerado ordens. Isto será gerenciado por um analista sênior.
+
+            -   O sistema identifica a necessidade, mas não gera a ordem.
+
+### DB0105 Manutenção Familia Materiais
+
+Tela:
+
+![Manutenção Família Materiais](images/aps/db0105.png){width="500"}
+
+## DB0101
+
+## DB0106 Manutenção Item Manufaturado
+
+Baseado no DB0107 Manutenção de Grupo de Máquinas
+
+## DB0107 Manutenção de Grupo de Máquina
+
+Dados que vêm do ERP:
+
+-   Calendário
+
+-   Número de Máquinas
+
+#### Nível do Grupo de Máquina (GM)
+
+Ajuda a definir o nível em que o grupo de máquina vai atuar.
+
+### Parâmetros
+
+-   \% Capacidade Protetiva:
+
+-   Aloca Centro de Trabalho:
+
+    -   Prioridade ou
+
+    -   Uniforme
+
+### Sequenciamento
+
+-   Processador:
+
+    -   Capacidade Infinita
+
+    -   Capacidade Finita
+
+        -   Alocação dos Centro de Trabalhos ligados ao Grupo de Máquina é obrigatória.
+
+        -   Se queremos considerar os tempos do grupo de máquina, devemos considerar Capacidade Finita
+
+        -   
+
+### Otimização de Setup
+
+-   Regras de Despacho:
+
+    -   verificar FAQ para entender Regras de Despacho
+
+        -   99% Data de entrega!
+
+-   Priorizar:
+
+    -   Grupo de Entrega:
+
+        -   para quem trabalha com grupo de entrega
+
+    -   Ordem de Produção Firme
+
+        -   ///
+
+-   Processador
+
+    -   Capacidade Finita
+
+        -   habilita botão de otimização de setup (é feita antes do sequenciamento)
+
+            -   Critérios de Agrupamento
+
+                -   Item/Operação
+
+                -   Ferramenta e % Redução de Setup (Importante para Moldes)
+
+                    -   Operações que usam mesma ferramenta recebem % Redução de Setup
+
+                    -   Agrupa as operaçãos e a partir da segunda operação o tempo de setup é zero.
+
+                -   Matriz de setup
+
+                    -   utiliza-se quando há redução de setup quando passa de um item para outro.
+
+                        -   por exemplo, na produção de canetas coloridas, o tempo de setup pode ser reduzido quando o setup é menor do vermelho para o azul, e do azul para o preto, comparado com o setup quando mudamos do preto para o azul e do azul para o vermelho.
+
+                -   Batelada
+
+                    -   Fecha otimizador de setup e abre aba de "batelada"
+
+                        -   útil para clientes que trabalham com fornos e auto-clave.
+
+                -   
