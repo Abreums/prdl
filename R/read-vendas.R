@@ -21,9 +21,10 @@ read_venda <- function(filename) {
 }
 
 get_files <- function(path) {
-  path = "./docs/reports/vendas/SPB"
+  #path = "./docs/reports/vendas/SPB"
   files_list <-
     list.files(path = path,
+               pattern = "xlsx",
                full.names = TRUE)
 }
 

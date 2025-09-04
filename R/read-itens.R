@@ -41,6 +41,19 @@ set_item_family <- function(df_item) {
   item_w_family <-
     df_item |>
     mutate(mat_group_desc = str_squish(mat_group_desc)) |>
+    mutate(grupo_estoque = case_when(
+      str_detect(tipo_de_materiais, "Raw materials") ~ "30",
+      str_detect(tipo_de_materiais, "Semifinished Product") ~ "20",
+      str_detect(tipo_de_materiais, "Packaging") ~ "40",
+      str_detect(tipo_de_materiais, "Returnable packaging") ~ "70",
+      str_detect(tipo_de_materiais, "Operating supplies") ~ "60",
+      str_detect(tipo_de_materiais, "Services") ~ "30",
+      str_detect(tipo_de_materiais, "Finished Products") ~ "10",
+      str_detect(tipo_de_materiais, "Product resource/tools") ~ "50",
+      str_detect(tipo_de_materiais, "Services") ~ "99",
+      str_detect(tipo_de_materiais, "SNon-Stock Material") ~ "99",
+      TRUE ~ "99"
+    )) |>
     mutate(fam_m = str_sub(tetenr, start = 1L, end = 2L)) |>
     mutate(             # ATENÇÃO! A ORDEM ABAIXO IMPORTA !
       family = case_when(

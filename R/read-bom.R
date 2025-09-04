@@ -27,7 +27,7 @@ get_component_base <- function(component, bom){
 }
 
 get_bom_from_id <- function(id, bom) {
-  id = "F00717002045A"
+  #id = "F00717002045A"
   upper_bom <-
     bom |>
     filter(material_number == id)
@@ -35,10 +35,12 @@ get_bom_from_id <- function(id, bom) {
   final_bom <- upper_bom
   sub_bom <- upper_bom
 
+  print(sub_bom |> first() |> pull(material_number))
   while(nrow(sub_bom) != 0){
     sub_bom <-
       get_bom_component(upper_bom) |>
       get_component_base(bom)
+    print(sub_bom |> first() |> pull(material_number))
 
     if(nrow(sub_bom)){
       final_bom <-
@@ -49,8 +51,7 @@ get_bom_from_id <- function(id, bom) {
   }
   final_bom  <-
     final_bom |>
-    mutate(estabelecimento = ifelse(plant == "SPB", 103, ifelse(plant == "SPI", 102, NA))) |>
-    mutate(comp_qtty = (as.numeric(str_replace_all(component_quantity, "[[:punct:]]", ""))))
+    mutate(estabelecimento = ifelse(plant == "SPB", 103, ifelse(plant == "SPI", 102, NA)))
 }
 
 
@@ -75,7 +76,7 @@ get_itens_of_bom <- function(bom, itens) {
     select(id = tetenr,
            desc,
            grupo_estoque,
-           fam_mat = familia,
+           # fam_mat = familia,
            fam_com = teprgr,
            un,
            estabelecimento,
@@ -93,4 +94,37 @@ get_mp_cmp_from_item_bom <- function(item_bom) {
     filter(!str_detect(bom_component, "^R1")) |>
     filter(!str_detect(bom_component, "^V1")) |>
     distinct(bom_component)
+}
+
+build_bom <- function(component, bom) {
+  # component <- "F00717053001A"
+  upper_bom <-
+    bom |>
+    filter(material_number == component)
+  final_bom <- upper_bom
+  sub_bom <- upper_bom
+
+  while(nrow(sub_bom) != 0){
+    sub_bom <-
+      get_bom_component(upper_bom) |>
+      get_component_base(bom)
+    print(sub_bom |> first() |> pull(material_number))
+
+    if(nrow(sub_bom)){
+      final_bom <-
+        final_bom |>
+        bind_rows(sub_bom)
+      upper_bom <- sub_bom
+    }
+  }
+  final_bom <-
+    final_bom
+  # mutate(base_quantidade = base_quantidade
+  #        temein = temein,
+  #        unit_measure = unit_measure,
+  #
+  #   temein = as.integer(temein),
+  #        # comp_qtty = (as.numeric(str_replace_all(component_quantity, "[[:punct:]]", "")) / 10000000),
+  #        ofator = (10^(as.numeric(temein)-1)),
+  #        ncomp_qtty = ifelse(fixed_qty == "x", comp_qtty, comp_qtty / ofator))
 }
