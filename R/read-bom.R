@@ -108,7 +108,7 @@ build_bom <- function(component, bom) {
     sub_bom <-
       get_bom_component(upper_bom) |>
       get_component_base(bom)
-    print(sub_bom |> first() |> pull(material_number))
+    #print(sub_bom |> first() |> pull(material_number))
 
     if(nrow(sub_bom)){
       final_bom <-
