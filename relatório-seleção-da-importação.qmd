@@ -1,0 +1,115 @@
+---
+title: "Seleção de Migração para Datasul"
+format: docx
+editor: visual
+---
+
+```{r}
+#| warning: false
+#| echo: false
+
+library(dplyr)
+library(gt)
+library(gtExtras)
+library(scales)
+
+```
+
+## Fonte dos dados
+
+A informação dos códigos dos itens e seus projetos foram extraídas do sistema XPert.
+
+O ano indica uma das duas opções:
+
+-   Ano do Relatório de Vendas em que a peça apareceu pela última vez.
+
+    -   Estamos trabalhando com relatórios de vendas de:
+
+        -   SPI: 2025
+
+        -   SPB: 2023, 2024, 2025
+
+-   Ano do Pedido em Carteira em que a peça apareceu pela última vez.
+
+    -   Estamos trabalhando com a lista completa de Pedidos em Carteira geradas pelo XPert desde julho de 2025
+
+## Projetos Cadastrados no XPert
+
+```{r}
+#| warning: false
+#| echo: false
+
+alcance <- readRDS("alcance.RDS")
+
+total <- alcance |> distinct(item) |> nrow()
+para_importar <- alcance |>  filter(!is.na(year)) |> distinct(item) |> nrow()
+not_importar <- total - para_importar
+
+n_proj <- alcance |> distinct(prj) |> filter(!is.na(prj)) |> nrow()
+
+
+```
+
+Foram identificados no sistema XPert `r n_proj` cadastrados, cada qual com o número de peças finais indicadas na tabela abaixo.
+
+Destes projetos, considerando o critério descrito acima, estão sendo importadas para o Datasul `r para_importar` peças "F", de um total de `r total`.
+
+```{r}
+#| warning: false
+#| echo: false
+
+alcance |> 
+  group_by(prj2) |> 
+  summarise(total = n()) |> 
+  mutate(prj2 = ifelse(is.na(prj2), "Sem Projeto", prj2)) |> 
+  gt() |> 
+  tab_header(title = "Peças por projeto") |> 
+  cols_label(
+    prj2 = "Projeto",
+    total = "Peças Cadastradas"
+  )
+
+```
+
+## Peças selecionadas por projeto
+
+```{r}
+#| echo: false 
+#| results: asis 
+
+f_table <- function(df){
+    df |> 
+    gt()|> 
+    data_color(columns="year",
+               colors=col_numeric(palette="Blues", c(2023, 2024, 2025))) |> 
+    tab_options(column_labels.hidden = TRUE) |> 
+    as_raw_html()
+}
+
+ff_table <- function(df) {
+  
+  df <- 
+    df |>
+    mutate(i_block =  (row_number() - 1) %/% (n() / (n()/20)))
+  
+  f_names <- df |> distinct(i_block) |> pull()
+  f_title <- df |> distinct(prj2) |> pull()
+  
+  df |> 
+    group_by(i_block) |> 
+    select(i_block, year, item) |> 
+    group_map(~ f_table(.x))|> 
+    data.frame() |> 
+    setNames(f_names) |> 
+    gt() |> 
+    tab_header(title = f_title) |> 
+    fmt_markdown(columns = everything())
+}
+
+alcance |> 
+  arrange(prj, -year, rev(item)) |> 
+  group_by(prj) |> 
+  select(prj, prj2, year, item) |> 
+  group_map(~ ff_table(.x))
+
+```
