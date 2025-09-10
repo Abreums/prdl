@@ -206,3 +206,16 @@ report |> glimpse()
 ```
 
 No relatório acima temos uma relação entre filial, linha, posto, molde e item.
+```{r}
+bop |> distinct(firm, description, machine) |> arrange(firm, description) |> write.csv("postos.csv")
+bop |> 
+  filter(str_detect(firm, "SPI"),
+         str_detect(description, "MONTAGEM")) |> 
+  select(estabelecimento = firm, linha = description, centro_trabalho = machine) |> 
+  distinct(estabelecimento, linha, centro_trabalho) |> 
+  mutate(descricao = "",
+         grupo_maquina = "") |> 
+  write.csv("spi_montagem.csv")
+
+```
+

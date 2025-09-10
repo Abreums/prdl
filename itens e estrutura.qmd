@@ -113,19 +113,56 @@ pedidos <-
     )
   )
 
-pedidos |> 
-  distinct(item) |> 
-  nrow()  
+p1 <- 
+  pedidos |>
+  mutate(year = year(order_date)) |> 
+  group_by(item) |> 
+  summarise(year = max(year))
 
-pedidos |> 
-  distinct(customer_number, doca_code, item) |> 
-  nrow()
+i1 <- 
+  itens |> 
+  select(
+    item = tetenr, 
+    prj = teprgr, 
+    prj2 = fstext) 
 
-itens_pedidos <- 
-  pedidos |> 
-  distinct(item)
+p2 <- 
+  p1 |> 
+  full_join(i1) |> 
+  filter(!is.na(year)) |> 
+  arrange(prj, prj2, year, item) |> 
+  distinct(prj, prj2, year, item)
+
+p3 <- 
+  p1 |> 
+  full_join(i1) |> 
+  filter(str_detect(item, "^F")) |>
+  arrange(prj, prj2, year, item) |> 
+  distinct(prj, prj2, year, item)
+
+p <- 
+  rbind(p2, p3) |> 
+  group_by(item) |> 
+  summarise(prj = first(prj, na.rm = TRUE),
+            prj2 = first(prj2, na.rm = TRUE),
+            year = max(year)) |> 
+  select(prj, prj2, year, item)
+p |> View()
 
 
+library(gt)
+
+p1 |> 
+  count(prj, year, item, sort = TRUE) |> 
+  group_by(prj) |> 
+  gt(groupname_col = c("prj", "year")) |> 
+  summary_rows(
+    columns = c(n),
+    fns = list(
+      label = md("**ALL**"), 
+      id = "totals") ~ sum(.)
+  )
+  
 
 p1 |> 
   group_by(customer, fstext, teprgr) |> 
@@ -142,7 +179,7 @@ spb_vendas <-
 spb_vendas <-
   spb_vendas |>
 #  select(item) |>
-  mutate(filial = "SPI")
+  mutate(filial = "SPB")
 spi_vendas <- 
   get_itens_from_branch("SPI") 
 spi_vendas <- 
@@ -153,14 +190,38 @@ vendas <-
   rbind(spb_vendas, spi_vendas)
 # |>    
 #   distinct(item, filial) 
-vendas |>  
-  count(item, sort = TRUE) |> 
-  View() 
+vendas <- 
+  vendas |> 
+  mutate(year = year(as.Date(status))) |> 
+  group_by(item) |> 
+  summarise(year = max(year))
 
 itens_vendidos <- 
   vendas |> 
-  distinct(item)
+  left_join(i1) |> 
+  arrange(prj, prj2, year, item) |> 
+  distinct(prj, prj2, year, item)
 
+itens_vendidos
+
+```
+
+"p" indica os itens que foram solicitados e itens_vendidos os que foram faturados
+
+```{r}
+
+alcance <- 
+  rbind(p, itens_vendidos)
+
+saveRDS(alcance, file = "alcance.rds")
+
+# itens sem projetos significa que não constam na base XPert
+alcance |> 
+  filter(is.na(prj))
+
+alcance |> 
+  group_by(prj, prj2) |> 
+  nest()  |> View()
 ```
 
 ### Join Vendas com Recent Orders
