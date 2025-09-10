@@ -75,7 +75,7 @@ alcance |>
 
 ```{r}
 #| echo: false 
-#| results: asis 
+# #| results: asis 
 
 f_table <- function(df){
     df |> 
