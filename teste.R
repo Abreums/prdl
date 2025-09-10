@@ -11,4 +11,5 @@ mtcars <-
   rownames_to_column(var = "car_model")
 
 mtcars |>
-  count(cyl)
+  group_by(cyl) |>
+  summarise(mpg = mean(mpg))
