@@ -1,0 +1,19 @@
+---
+title: "Matéria Prima & Componentes"
+format: html
+editor: visual
+---
+
+```{r}
+#| warning: false
+#| echo: false
+
+library(tidyverse)
+library(stringr)
+library(gt)
+library(gtExtras)
+library(scales)
+
+```
+
+Lista de Matérias Primas Utilizadas por Produto

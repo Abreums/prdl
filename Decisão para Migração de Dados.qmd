@@ -17,31 +17,13 @@ library(scales)
 
 ```
 
-## Fonte dos dados
-
-A informação dos códigos dos itens e seus projetos foram extraídas do sistema XPert.
-
-O ano indica uma das duas opções:
-
--   Ano do Relatório de Vendas em que a peça apareceu pela última vez.
-
-    -   Estamos trabalhando com relatórios de vendas de:
-
-        -   SPI: 2025
-
-        -   SPB: 2023, 2024, 2025
-
--   Ano do Pedido em Carteira em que a peça apareceu pela última vez.
-
-    -   Estamos trabalhando com a lista completa de Pedidos em Carteira geradas pelo XPert desde julho de 2025
-
 ## Projetos Cadastrados no XPert
 
 ```{r}
 #| warning: false
 #| echo: false
 
-alcance <- readRDS("alcance.RDS")
+alcance <- read_rds("data/escopo-f.rds")
 
 alcance <- 
   alcance |> 
@@ -57,46 +39,60 @@ n_proj <- alcance |> distinct(prj) |> filter(!is.na(prj)) |> nrow()
 
 ```
 
-Foram identificados no sistema XPert `r n_proj` cadastrados, cada qual com o número de peças finais indicadas na tabela abaixo.
+Dados do XPert:
 
-Destes projetos, considerando o critério descrito acima, estão sendo importadas para o Datasul `r para_importar` peças "F", de um total de `r total`.
+-   `r n_proj` projetos cadastrados.
+
+-   `r total` peças (códigos "F") cadastradas.
+
+Destas peças, `r para_importar` serão importadas para o Datasul, conforme listadas a seguir.
 
 ```{r}
 #| warning: false
 #| echo: false
 #| results: asis
-
-
-gt_bloco <- function(df){
-  df |>
-    gt()|>
-    tab_options(column_labels.hidden = TRUE) |>
-    as_raw_html()
-}
-
-df <- 
-  alcance |> 
-  group_by(prj2) |> 
-  summarise(total = n()) |> 
-  mutate(bloco = ((row_number() - 1) %/% 40))
-
-df_names <- df |> distinct(bloco) |> pull()
-
-df |>   
-  arrange(prj2) |> 
-  group_by(bloco) |> 
-  select(everything()) |> 
-  group_map(~ gt_bloco(.x)) |> 
-  data.frame() |> 
-  setNames(df_names) |> 
-  gt() |> 
-  tab_header(title = "Peças por projeto") |>
-  tab_options(column_labels.hidden = TRUE) |>
-  fmt_markdown(columns = everything())
+# 
+# 
+# gt_bloco <- function(df){
+#   df |>
+#     gt()|>
+#     tab_options(column_labels.hidden = TRUE) |>
+#     as_raw_html()
+# }
+# 
+# df <-
+#   alcance |>
+#   group_by(prj2) |>
+#   summarise(total = n()) |>
+#   mutate(bloco = ((row_number() - 1) %/% (n() / 4)))
+# 
+# df_names <- df |> distinct(bloco) |> pull()
+# 
+# df |>
+#   arrange(prj2) |>
+#   group_by(bloco) |>
+#   select(everything()) |>
+#   group_map(~ gt_bloco(.x)) |>
+#   data.frame() |>
+#   setNames(df_names) |>
+#   gt() |>
+#   tab_header(title = "Peças por projeto") |>
+#   tab_options(column_labels.hidden = TRUE) |>
+#   fmt_markdown(columns = everything())
 
 ```
 
 ## Peças selecionadas por projeto
+
+As peças importadas são aquelas que apresentam o ano nas tabelas abaixo.
+
+Peças com "NA" não serão importadas.
+
+O "ano" indica uma das duas opções:
+
+-   ano mais recente em que a peça foi vendida (conforme relatórios de vendas fornecidos).
+
+-   ano mais recente em que a peça aparece no relatório de "Pedidos em Carteira".
 
 ```{r}
 #| echo: false 
@@ -106,7 +102,8 @@ ff_sub_bloco <- function(df){
   df |>
     gt()|>
     data_color(columns="year",
-               colors=col_numeric(palette="Blues", c(2021, 2022, 2023, 2024, 2025))) |>  
+               fn = col_numeric(palette="Blues",
+                                domain = c(2021, 2025))) |>  
     tab_options(column_labels.hidden = TRUE) |>
     as_raw_html()
 }

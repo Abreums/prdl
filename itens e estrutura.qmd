@@ -13,9 +13,10 @@ library(gdata)
 
 ```
 
-### Ler informações de itens: Matéria Prima, Componentes, Semi-acabados (I) e acabados (F)
+## Itens
 
 ```{r}
+#| warning: false
 
 source("R/read-itens.R")
 
@@ -23,42 +24,7 @@ source("R/read-itens.R")
 filename_itens <- here("data", "Artigos 2025-09-02.xlsx")
 
 itens <- read_itens(filename_itens)
-itens |> View()
 
-
-itens |> filter(tetenr == "F03511022085A")|> View()
-mp <- 
-itens |> 
-        filter(!str_detect(tetenr, "^E1")) |>
-      filter(!str_detect(tetenr, "^E2")) |>
-      filter(!str_detect(tetenr, "^F0")) |>
-      filter(!str_detect(tetenr, "^FA")) |>
-      filter(!str_detect(tetenr, "^IO")) |>
-      filter(!str_detect(tetenr, "^LM")) |>
-      filter(!str_detect(tetenr, "^LP")) |>
-      filter(!str_detect(tetenr, "^MA")) |>
-      filter(!str_detect(tetenr, "^MO")) |>
-      filter(!str_detect(tetenr, "^R1")) |>
-      filter(!str_detect(tetenr, "^R2")) |>
-      filter(!str_detect(tetenr, "^SE")) |>
-      filter(!str_detect(tetenr, "^SP")) |>
-      filter(!str_detect(tetenr, "^V1")) |>
-  select(tetenr, temagr, mat_group_desc, desc) |> 
-  filter(!str_detect(tetenr, "^F")) |> 
-  filter(!str_detect(tetenr, "^I")) |> 
-  filter(!str_detect(tetenr, "^SP"))
-
-mp |> View()
-mp |> write.csv("mp.csv")
-
-  View()
-
-fi <- 
-  itens |> filter(str_detect(tetenr, "^F") | str_detect(tetenr, "^I"))
-fi |> nrow()
-fi |> View()
-
-f <- itens |> filter(str_detect(tetenr, "^F")) 
 ```
 
 ## Determinar a Carteira de Produtos Simoldes
@@ -74,16 +40,6 @@ Para filtrar os itens que fazem parte da carteira de produtos simoldes atual vam
 source("R/carteira-pedidos.R")  
 
 pedidos <- get_order_history()  
-
-pedidos |> glimpse()  
-
-pedidos |> 
-  distinct(item) |> 
-  nrow()  
-
-pedidos |> 
-  distinct(customer_number, doca_code, item) |> 
-  nrow()
 
 pedidos <-
   pedidos |>
@@ -113,60 +69,10 @@ pedidos <-
     )
   )
 
-p1 <- 
-  pedidos |>
-  mutate(year = year(order_date)) |> 
-  group_by(item) |> 
-  summarise(year = max(year))
 
-i1 <- 
-  itens |> 
-  select(
-    item = tetenr, 
-    prj = teprgr, 
-    prj2 = fstext) 
+pedidos |> write_rds("data/carteira-pedidos.RDS")
+pedidos <- read_rds("data/carteira-pedidos.RDS")
 
-p2 <- 
-  p1 |> 
-  full_join(i1) |> 
-  filter(!is.na(year)) |> 
-  arrange(prj, prj2, year, item) |> 
-  distinct(prj, prj2, year, item)
-
-p3 <- 
-  p1 |> 
-  full_join(i1) |> 
-  filter(str_detect(item, "^F")) |>
-  arrange(prj, prj2, year, item) |> 
-  distinct(prj, prj2, year, item)
-
-p <- 
-  rbind(p2, p3) |> 
-  group_by(item) |> 
-  summarise(prj = first(prj, na.rm = TRUE),
-            prj2 = first(prj2, na.rm = TRUE),
-            year = max(year)) |> 
-  select(prj, prj2, year, item)
-p |> View()
-
-
-library(gt)
-
-p1 |> 
-  count(prj, year, item, sort = TRUE) |> 
-  group_by(prj) |> 
-  gt(groupname_col = c("prj", "year")) |> 
-  summary_rows(
-    columns = c(n),
-    fns = list(
-      label = md("**ALL**"), 
-      id = "totals") ~ sum(.)
-  )
-  
-
-p1 |> 
-  group_by(customer, fstext, teprgr) |> 
-  nest()
 ```
 
 #### Relatórios de Vendas
@@ -174,112 +80,82 @@ p1 |>
 ```{r}
 
 source("R/read-vendas.R")  
+
 spb_vendas <- 
   get_itens_from_branch("SPB") 
+
 spb_vendas <-
   spb_vendas |>
-#  select(item) |>
   mutate(filial = "SPB")
+
 spi_vendas <- 
   get_itens_from_branch("SPI") 
+
 spi_vendas <- 
   spi_vendas |> 
-#  select(item) |> 
   mutate(filial = "SPI")  
+
 vendas <- 
   rbind(spb_vendas, spi_vendas)
-# |>    
-#   distinct(item, filial) 
+
 vendas <- 
   vendas |> 
   mutate(year = year(as.Date(status))) |> 
   group_by(item) |> 
   summarise(year = max(year))
 
-itens_vendidos <- 
+# acrescentar informações de projeto
+vendas <- 
   vendas |> 
-  left_join(i1) |> 
-  arrange(prj, prj2, year, item) |> 
+  left_join(itens |> select(item = tetenr, prj = teprgr, prj2 = fstext)) |> 
   distinct(prj, prj2, year, item)
 
-itens_vendidos
+vendas |> write_rds("data/vendas.rds")
+vendas <- read_rds("data/vendas.rds")
 
 ```
 
-"p" indica os itens que foram solicitados e itens_vendidos os que foram faturados
+## Escopo - Peças F
 
 ```{r}
+escopo_f <- 
+  itens |> 
+  filter(str_detect(tetenr, "^F")) |> 
+  select(item = tetenr, prj = teprgr, prj2 = fstext) |> 
+  left_join(p_importar)
 
-alcance <- 
-  rbind(p, itens_vendidos)
+escopo_f |> write_rds("data/escopo-f.rds")
+escopo_f <- read_rds("data/escopo-f.rds")
 
-saveRDS(alcance, file = "alcance.rds")
-
-# itens sem projetos significa que não constam na base XPert
-alcance |> 
-  filter(is.na(prj))
-
-alcance |> 
-  group_by(prj, prj2) |> 
-  nest()  |> View()
 ```
 
-### Join Vendas com Recent Orders
+## Escopo - Importar
 
 ```{r}
 
-library(ggVennDiagram)
+p_importar <- 
+  pedidos |>
+  mutate(year = year(order_date)) |> 
+  group_by(item) |> 
+  summarise(year = max(year)) |> 
+  left_join(itens |> select(item = tetenr, prj = teprgr, prj2 = fstext)) |> 
+  distinct(prj, prj2, year, item)
 
-itens_vendidos
-itens_pedidos
-x <- list(Vend = itens_vendidos |> pull(item), Ped = itens_pedidos |> pull(item))
+p_importar <-
+  p_importar |> 
+  rbind(vendas) |> 
+  group_by(item) |> 
+  summarise(prj = first(prj, na.rm = TRUE),
+            prj2 = first(prj2, na.rm = TRUE),
+            year = max(year)) |> 
+  select(prj, prj2, year, item) |> 
+  filter(str_detect(item, "^F"))
 
-ggVennDiagram(x)
-
-cods <- itens |> select(tetenr, teprgr, fstext)
-
-cods <- 
-  cods |> 
-  filter(!str_detect(teprgr, "^PROD"))
-
-cods |> 
-  filter(str_detect(tetenr, "^F")) |> 
-  count(teprgr, fstext) |> 
-  View()
-
-cods |> 
-  filter(str_detect(teprgr, "1312")) |> 
-  View()
-
-
-pedidos_de_venda <- 
-  p1 |> 
-  arrange(item) |> 
-  pull(item)
-
-x <- list(Vendas = vendas, Pedidos = pedidos_de_venda
-          )
-ggVennDiagram(x)
-
-
-df_para_importar <-  
-  itens_pedidos |> 
-  full_join(itens_vendidos) |> 
-  distinct(item) |> 
-  left_join(cods, join_by(item == tetenr) )
-
-df_para_importar |> write.csv("finais.csv")
-
-# itens que ficaram de fora da importação:
-itens |> 
-  filter(str_detect(tetenr, "^F")) |> 
-  filter(!tetenr %in% para_importar) |> nrow()
-
+p_importar |> saveRDS(file = "data/p-importar.rds")
+p_importar <- read_rds("data/p-importar.rds")
 ```
 
 ## Ler estruturas de BoM e BoP
-
-Vamos utilizar a BoM para identificar toda a Matéria prima relacionada a um item
 
 ```{r}
 
@@ -288,157 +164,122 @@ source("R/read-bop.R")
 
 # file_bom <- here::here("data", "BOM 2025-06-11.xlsx")
 file_bom <- here::here("data", "BOM 2025-09-02.xlsx")
+bom <- read_bom(file_bom)
 
 file_bop_spi <- here::here("data", "BOP SPI 2025-07-20.xlsx")
 file_bop_spb <- here::here("data", "BOP SPB 2025-07-20.xlsx")
 
-bom <- read_bom(file_bom)
-bom |> glimpse()
-bom |> View()
+bop_spi <- read_bop(file_bop_spi)
+bop_spb <- read_bop(file_bop_spb)
 
-## Alguns itens não possuem BOM registrada:
-para_importar_sem_bom <- 
-df_para_importar |> 
-  anti_join(bom, join_by(item == material_number))
-para_importar_sem_bom |> View()
+bop <- rbind(bop_spi, bop_spb)
 
-df_para_importar <- 
-  df_para_importar |> 
-  filter(!item %in% c("F02108017001B", "F00222006005B", "F00222002005B", "F00717045006A" )) |> 
-  filter(str_detect(item, "^F"))
-df_para_importar |> nrow()
+bop |> glimpse()
 
-para_importar <- 
-  df_para_importar |> 
-  pull(item)
-
-componentes_para_importar <- 
-  map(para_importar, ~ build_bom(.x, bom) |> get_mp_cmp_from_item_bom()) |>
-  reduce(rbind) 
-
-componentes_para_importar <- 
-componentes_para_importar |> 
-  filter(!str_detect(bom_component, "^F")) |> 
-  filter(!str_detect(bom_component, "^I")) |> 
-  pull(bom_component)
-
-itens_para_importar <- 
-  itens |> 
-  filter(tetenr %in% componentes_para_importar) |> 
-  select(empresa, tetenr, 
-         tipo_de_materiais, desc = tebez1, temagr, mat_group_desc,
-         tematc)
-itens_p_ipm <- 
-  set_item_family(itens_para_importar) |> 
-  select(estabelecimento = empresa, item = tetenr, 
-         tipo_de_materiais, desc, familia_xpert = temagr, mat_group_desc,
-         tematc, family)
-
-file_imp <- here("data", "Dados para Importacao.xlsx")
-
-file_sheets <- readxl::excel_sheets(file_imp)
-familias <- readxl::read_excel(file_imp,
-                               sheet = file_sheets[2],
-                               col_types = "text") |> 
-  janitor::clean_names()
-
-familias |> View()
-itens_p_ipm <- 
-  itens_p_ipm |>
-  left_join(familias, join_by(family == familia)) |> 
-  mutate(responsável = "") |> 
-  select(estabelecimento, item, tipo_de_materiais, desc, familia_xpert,
-         mat_group_desc, tematc, familia_ds = family, fam_desc = descricao, un = unp)
-  
-
-itens_p_ipm |> write.csv("mp_comp.csv")
-
-mp_cmp <-
-  df_mp_cmp |> 
-  distinct(bom_component)
-  pull(bom_component)
-mp_cmp |> View()
-
-ex1 <- 
-  tibble(
-    item = c("1100159V000", "1200458V000", "1300046", 
-             "7100493V000", "6200073V000", "3200334", 
-             "1900031", "1701103", "1800039", 
-             "1201529", "5300181", "3200293",
-             "4700506", "4800222", "5801264V000"))
-
-ex1 <- 
-  ex1 |> 
-  left_join(itens, join_by(item == tetenr)) |> 
-  select(item, tipo_de_materiais, desc = tebez1, temagr, mat_group_desc)
-
-ex1 |> write.csv("ex1.csv")
-```
-
-## Preparar arquivo para importar em massa BoM e BoP
-
-Vamos trabalhar com 4 itens do JIT VW:
-
-2GP 868 010 C BSE F00717002041A PNL TRAS DIR T-CROSS DOOR PANEL TITAN COOL RR
-
-2GP 867 006 L AAM F00717003040A PNL DIAN DIR T-CROSS DOOR PAINEL W/LIGH/CHIM FR
-
-2GP 868 009 C BSE F00717002040A PNL TRAS ESQ T-CROSS DOOR PANEL TITAN COOL RL
-
-2GP 867 005 M AAM F00717002045A PNL DIAN ESQ T-CROSS DOOR PAINEL W/LIGHT/CRE FL
-
-```{r}
-
-itens_to_import <- c("F002220020")
-, 
-                       "F00401043002A",
-                       "F00401061001A", 
-                       "F00422002001A",
-                     "F00709003001A",
-                     "F00709008001A",
-                     "F00709025005A",
-                     "F00709030003A",
-                     "F00713007002A",
-                     "F00716003001A",
-                     "F00717044001A",
-                     "F00717053001A",
-                     "F00819005001A",
-                     "F01009001003A")
-
-import_data <- 
-  f |> 
-  filter(tetenr %in% itens_to_import) 
-
-import_raw_material <- 
-map(itens_to_import, 
-    ~ get_bom_from_id(.x, bom) |> get_itens_of_bom(itens)) |> 
-  reduce(rbind) |> 
-  distinct(id, desc)
-
-
-import_raw_material |> View()
-
-
-
+## Alguns itens não possuem BOM registrada!
+## Pendente decidir o que fazer com estes!
+p_importar |> 
+  anti_join(bom, join_by(item == material_number)) |> 
+  View()
 
 ```
 
-## Final import set
+## BoM do que vai importar
 
 ```{r}
 
-to_imp_itens <- 
-  itens |> filter(tetenr %in% mp_cmp)
+p_importar |> glimpse()
 
-to_imp_itens <- 
-  set_item_family(to_imp_itens)
+x <- get_bom_from_id("F02023004001A", bom)
 
 
-# Estes dados servem para importar em massa
-# Antes é preciso criar as famílias manualmente
-to_imp_itens |> 
-  select(estabelecimento, tetenr, desc, temagr, mat_group_desc, grupo_estoque, family) |> View()
+mp <-
+  itens |>
+  filter(!str_detect(tetenr, "^E1")) |>
+  filter(!str_detect(tetenr, "^E2")) |>
+  filter(!str_detect(tetenr, "^F0")) |>
+  filter(!str_detect(tetenr, "^FA")) |>
+  filter(!str_detect(tetenr, "^IO")) |>
+  filter(!str_detect(tetenr, "^LM")) |>
+  filter(!str_detect(tetenr, "^LP")) |>
+  filter(!str_detect(tetenr, "^MA")) |>
+  filter(!str_detect(tetenr, "^MO")) |>
+  filter(!str_detect(tetenr, "^R1")) |>
+  filter(!str_detect(tetenr, "^R2")) |>
+  filter(!str_detect(tetenr, "^SE")) |>
+  filter(!str_detect(tetenr, "^SP")) |>
+  filter(!str_detect(tetenr, "^V1")) |>
+  select(tetenr, temagr, mat_group_desc, desc) |>
+  filter(!str_detect(tetenr, "^F")) |>    
+  filter(!str_detect(tetenr, "^I")) |>    
+  filter(!str_detect(tetenr, "^SP"))
+
+
 
 ```
 
 ## 
+
+## Matéria Prima - Para Importar
+
+```{r}
+to_imp_itens <-    
+  itens |> 
+  filter(tetenr %in% mp_cmp)  
+
+to_imp_itens <-    
+  set_item_family(to_imp_itens)   
+
+# Estes dados servem para importar em massa # Antes é preciso criar as famílias 
+manualmente to_imp_itens |>    
+  select(estabelecimento, tetenr, desc, temagr, mat_group_desc, grupo_estoque, family) |> View()
+
+```
+
+# Importar Estrutura de 1 F
+
+Vamos criar aqui o processo para importar os produtos de 1 item F
+
+```{r}
+
+item_f <- "F02023004001A"
+
+itens |> 
+  filter(str_detect(tetenr, item_f)) |> 
+  select(estabelecimento = empresa, 
+         item = tetenr,
+         desc,
+         temagr, 
+         mat_group_desc,
+         grupo_estoque)
+
+# BOM
+bom_f <- get_bom_from_id("F02023004001A", bom)
+bom_f
+
+manufacted_f <- 
+  bom_f |> 
+  distinct(material_number) 
+
+
+manufacted_f <- 
+  manufacted_f |> 
+  mutate(bop = map(material_number, ~ bop |> filter(part_number == .))) |> 
+  unnest(bop)
+  
+manufacted_f |> View()
+
+get_itens_from_bom <- function(bom, itens){
+  components <-
+    bom |> pull(bom_component)
+
+  bom_itens <-
+    itens |>
+    arrange(estabelecimento, id, familia) |>
+    filter(id %in% components) |>
+    arrange(id)
+}
+
+
+
+```
