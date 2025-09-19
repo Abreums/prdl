@@ -15,8 +15,8 @@
 # trx = 1 importa e trx = 2 atualiza
 
 build_file_to_cd0209 <- function(components, out_file, trx = 1) {
-  components <- import_data
-  out_file <- "import_test.txt"
+  # components <- import_data
+  # out_file <- "import_test.txt"
   trx = 1
   to_exp <-
     components |>

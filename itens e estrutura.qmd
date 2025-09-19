@@ -25,6 +25,16 @@ filename_itens <- here("data", "Artigos 2025-09-02.xlsx")
 
 itens <- read_itens(filename_itens)
 
+projetos <- 
+itens |> 
+  filter(str_detect(tetenr, "^F")) |> 
+  select(item = tetenr,
+         prj_sigla = teprgr,
+         prj_desc = fstext)
+
+projetos |> write_rds("data/projetos.rds")
+projetos <- read_rds("data/projetos.rds")
+
 ```
 
 ## Determinar a Carteira de Produtos Simoldes
@@ -261,11 +271,18 @@ manufacted_f <-
   bom_f |> 
   distinct(material_number) 
 
-
 manufacted_f <- 
   manufacted_f |> 
   mutate(bop = map(material_number, ~ bop |> filter(part_number == .))) |> 
-  unnest(bop)
+  unnest(bop) |> 
+  mutate(desc = str_c(str_replace_na(description_1, replacement = " "),
+                      str_replace_na(description_2, replacement = " ")) |>
+           str_trim("both")) |> 
+  select(-c(company, variant, description_1, description_2, part_number)) |> 
+  select(item = material_number, desc, estabelecimento = firm, part_type,
+         cycle_time = cicle_type, piece_time, setup = set_up_time, 
+         machine, linha = description, multi_machines, multi_personnel, 
+         material_group, matchcode)
   
 manufacted_f |> View()
 
@@ -281,5 +298,26 @@ get_itens_from_bom <- function(bom, itens){
 }
 
 
+
+```
+
+### Acha Fs de item
+
+```{r}
+
+ii <- "1201564"
+
+bom |> 
+  filter(str_detect(bom_component, ii)) |> 
+  distinct(material_number) |> 
+  pull(material_number) |> 
+  map(~ bom |> filter(str_detect(bom_component, .)) |> 
+        distinct(material_number)) |> 
+  reduce(rbind) |> 
+  distinct(material_number) |> 
+  left_join(projetos, join_by(material_number == item))
+
+
+projetos |> distinct(prj_sigla, prj_desc) |> View()
 
 ```
