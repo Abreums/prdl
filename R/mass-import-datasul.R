@@ -15,16 +15,51 @@
 # trx = 1 importa e trx = 2 atualiza
 
 build_file_to_cd0209 <- function(components, out_file, trx = 1) {
-  # components <- import_data
-  # out_file <- "import_test.txt"
-  trx = 1
+  out_file <- "all.lst"
+
+  levas <-
+  importar |>
+    mutate(leva = str_sub(fam_mat, start = 1, end = 4)) |>
+    group_by(leva) |>
+    nest()
+
+  ja_cadastrados <- read_excel(here("data", "jah_cadastrados.xlsx")) |>
+    janitor::clean_names() |>
+    select(item) |>
+    mutate(trx = 2)
+
+  components <- levas[levas$leva == "3071",]$data[[1]]
+
+  components <-
+    components |>
+    left_join(ja_cadastrados, join_by("item")) |>
+    mutate(trx = ifelse(is.na(trx), 1, trx)) |>
+    mutate(un = case_when(
+      str_detect(item, "^20") ~ "KG",
+      str_detect(item, "^41") ~ "PC",
+      str_detect(item, "^42") ~ "PC",
+      str_detect(item, "^48") ~ "PC",
+      str_detect(item, "^49") ~ "PC",
+      str_detect(item, "^51") ~ "UN",
+      str_detect(item, "^52") ~ "UN",
+      str_detect(item, "^53") ~ "UN",
+      str_detect(item, "^54") ~ "UN",
+      str_detect(item, "^56") ~ "UN",
+      str_detect(item, "^57") ~ "UN",
+      str_detect(item, "^58") ~ "UN",
+      str_detect(item, "^71") ~ "KG",
+      TRUE ~ un
+    )) |>
+    mutate(desc = str_replace_all(desc, "[[:punct:]]", "")) |>
+    mutate(desc = iconv(desc,to="ASCII//TRANSLIT"))
+
   to_exp <-
     components |>
     mutate(
       tipo_trx = trx,
       situacao = 1,
-      dt_impl = "01012025",
-      dt_lib = "01012025",
+      dt_impl = "02022025",
+      dt_lib = "02022025",
       folha = "",
       tipo_controle = ifelse(grupo_estoque == "80", 4, 2),
       aplicacao = ifelse(grupo_estoque == "90", 1, 2),
@@ -35,7 +70,7 @@ build_file_to_cd0209 <- function(components, out_file, trx = 1) {
     ) |>
     select(
       tipo_trx,
-      id,
+      item,
       desc,
       grupo_estoque,
       fam_mat,
@@ -248,3 +283,4 @@ build_file_to_en0113 <- function(data) {
     1,  # Utiliza Quantidade Fixa? |  Caracter |          |     Não
   )
 }
+

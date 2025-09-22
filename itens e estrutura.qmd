@@ -321,3 +321,46 @@ bom |>
 projetos |> distinct(prj_sigla, prj_desc) |> View()
 
 ```
+
+# Ler Lista de famílias, MP e Componentes gerar aquivo para importar
+
+```{r}
+
+team_file <- here("data", "2025-09-19 classif fam mp.xlsx")
+
+tf_sheets <- readxl::excel_sheets(team_file)
+
+importar <- readxl::read_excel(team_file,
+                               sheet = tf_sheets[6]) |> 
+  janitor::clean_names() |> 
+  select(item, desc, familia_ds, un)
+
+importar <- 
+  importar |> 
+  group_by(item) |> 
+  summarise(desc = first(desc),
+            fam_mat = first(familia_ds),
+            un = first(un)) |> 
+  mutate(grupo_estoque = str_sub(fam_mat, start = 1L, end = 2L),
+         fam_com = " ",
+         estabelecimento = "102",
+         cod_complementar = " ")
+
+importar |> glimpse()
+
+source("R/mass-import-datasul.R")
+
+importar <- 
+  importar |> 
+  #filter(str_detect(id, "^11")) |> 
+  mutate(fam_mat = as.character(fam_mat)) 
+
+build_file_to_cd0209(importar, "mp.txt")
+
+
+pp |> 
+  filter(str_detect(id, "1100002"))
+
+
+
+```
