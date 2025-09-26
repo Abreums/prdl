@@ -14,21 +14,18 @@
 # out_file é o nome do arquivo gerado
 # trx = 1 importa e trx = 2 atualiza
 
-build_file_to_cd0209 <- function(components, out_file, trx = 1) {
-  out_file <- "all.lst"
+build_file_to_cd0209 <- function(components, out_file) {
 
-  levas <-
-  importar |>
-    mutate(leva = str_sub(fam_mat, start = 1, end = 4)) |>
-    group_by(leva) |>
-    nest()
+  # levas <-
+  #   importar |>
+  #   mutate(levas = fam_mat) |>
+  #   group_by(levas) |>
+  #   nest()
 
   ja_cadastrados <- read_excel(here("data", "jah_cadastrados.xlsx")) |>
     janitor::clean_names() |>
     select(item) |>
     mutate(trx = 2)
-
-  components <- levas[levas$leva == "3071",]$data[[1]]
 
   components <-
     components |>
@@ -48,10 +45,13 @@ build_file_to_cd0209 <- function(components, out_file, trx = 1) {
       str_detect(item, "^57") ~ "UN",
       str_detect(item, "^58") ~ "UN",
       str_detect(item, "^71") ~ "KG",
-      TRUE ~ un
+      str_detect(item, "^F") ~ "PC",
+      str_detect(item, "^I") ~ "PC",
+      TRUE ~ "UN"
     )) |>
     mutate(desc = str_replace_all(desc, "[[:punct:]]", "")) |>
-    mutate(desc = iconv(desc,to="ASCII//TRANSLIT"))
+    mutate(desc = iconv(desc,to="ASCII//TRANSLIT")) |>
+    mutate(grupo_estoque = str_sub(fam_mat, start = 1L, end = 2L))
 
   to_exp <-
     components |>
@@ -66,7 +66,9 @@ build_file_to_cd0209 <- function(components, out_file, trx = 1) {
       lote_econ = "",
       info = "",
       imagem = "",
-      narrativa = ""
+      narrativa = "",
+      estabelecimento = "102",
+      fam_com = str_sub(fam_mat, start = 3L, end = 8L)
     ) |>
     select(
       tipo_trx,
@@ -84,7 +86,7 @@ build_file_to_cd0209 <- function(components, out_file, trx = 1) {
       tipo_controle,
       aplicacao,
       lote_econ,
-      cod_complementar,
+      cod_comp,
       info,
       imagem,
       narrativa
