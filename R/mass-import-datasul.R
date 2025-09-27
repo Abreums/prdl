@@ -3,31 +3,27 @@
 
 # file_to_cd0209 prepara um arquivo com componentes para serem importados em massa
 # components é um tibble com os campos:
-#       id,
+#       item,
 #       desc,
 #       grupo_estoque,
 #       fam_mat,
 #       fam_com,
 #       un,
 #       estabelecimento,
-#       cod_complementar
+#       cod_comp
 # out_file é o nome do arquivo gerado
-# trx = 1 importa e trx = 2 atualiza
+mp_to_cd0209 <- function(components, out_file) {
 
-build_file_to_cd0209 <- function(components, out_file) {
+  components <- mp
 
-  # levas <-
-  #   importar |>
-  #   mutate(levas = fam_mat) |>
-  #   group_by(levas) |>
-  #   nest()
-
+  # Para importar matéria primas, vamos utilizar a listagem de
+  # "Já Cadastrados" para avaliar se é uma nova inclusão ou uma atualização
   ja_cadastrados <- read_excel(here("data", "jah_cadastrados.xlsx")) |>
     janitor::clean_names() |>
     select(item) |>
     mutate(trx = 2)
 
-  components <-
+  df <-
     components |>
     left_join(ja_cadastrados, join_by("item")) |>
     mutate(trx = ifelse(is.na(trx), 1, trx)) |>
@@ -54,7 +50,7 @@ build_file_to_cd0209 <- function(components, out_file) {
     mutate(grupo_estoque = str_sub(fam_mat, start = 1L, end = 2L))
 
   to_exp <-
-    components |>
+    df |>
     mutate(
       tipo_trx = trx,
       situacao = 1,
@@ -68,7 +64,7 @@ build_file_to_cd0209 <- function(components, out_file) {
       imagem = "",
       narrativa = "",
       estabelecimento = "102",
-      fam_com = str_sub(fam_mat, start = 3L, end = 8L)
+      fam_com = ifelse(str_detect(item, "^F"), "", str_sub(fam_mat, start = 3L, end = 8L))
     ) |>
     select(
       tipo_trx,

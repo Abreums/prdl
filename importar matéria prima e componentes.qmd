@@ -16,4 +16,6 @@ library(scales)
 
 ```
 
-Lista de Matérias Primas Utilizadas por Produto
+Lista de Matérias Primas Utilizadas por Produto.
+
+Importação de Matérias Primas e Componentes

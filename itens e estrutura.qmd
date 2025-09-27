@@ -15,22 +15,17 @@ library(gdata)
 
 ## Itens
 
+Carga de dados exportadas do XPert.
+
 ```{r}
 #| warning: false
 
 source("R/read-itens.R")
-
-#filename_itens <- here("data", "Artigos 2025-07-08.xlsx")
-filename_itens <- here("data", "Artigos 2025-09-02.xlsx")
-
-itens <- read_itens(filename_itens)
+itens <- read_itens()
 
 projetos <- 
-itens |> 
-  filter(str_detect(tetenr, "^F")) |> 
-  select(item = tetenr,
-         prj_sigla = teprgr,
-         prj_desc = fstext)
+  itens |> 
+  filter(str_detect(item, "^F")) 
 
 projetos |> write_rds("data/projetos.rds")
 projetos <- read_rds("data/projetos.rds")
@@ -117,25 +112,11 @@ vendas <-
 # acrescentar informações de projeto
 vendas <- 
   vendas |> 
-  left_join(itens |> select(item = tetenr, prj = teprgr, prj2 = fstext)) |> 
-  distinct(prj, prj2, year, item)
+  left_join(itens |> select(item, prj_sigla, prj_desc)) |> 
+  distinct(prj_sigla, prj_desc, item)
 
 vendas |> write_rds("data/vendas.rds")
 vendas <- read_rds("data/vendas.rds")
-
-```
-
-## Escopo - Peças F
-
-```{r}
-escopo_f <- 
-  itens |> 
-  filter(str_detect(tetenr, "^F")) |> 
-  select(item = tetenr, prj = teprgr, prj2 = fstext) |> 
-  left_join(p_importar)
-
-escopo_f |> write_rds("data/escopo-f.rds")
-escopo_f <- read_rds("data/escopo-f.rds")
 
 ```
 
@@ -148,8 +129,8 @@ p_importar <-
   mutate(year = year(order_date)) |> 
   group_by(item) |> 
   summarise(year = max(year)) |> 
-  left_join(itens |> select(item = tetenr, prj = teprgr, prj2 = fstext)) |> 
-  distinct(prj, prj2, year, item)
+  left_join(itens |> select(item, prj_sigla, prj_desc)) |> 
+  distinct(prj_sigla, prj_desc, year, item)
 
 p_importar <-
   p_importar |> 
@@ -198,31 +179,30 @@ p_importar |>
 
 ```{r}
 
-p_importar |> glimpse()
 
 x <- get_bom_from_id("F02023004001A", bom)
 
 
 mp <-
   itens |>
-  filter(!str_detect(tetenr, "^E1")) |>
-  filter(!str_detect(tetenr, "^E2")) |>
-  filter(!str_detect(tetenr, "^F0")) |>
-  filter(!str_detect(tetenr, "^FA")) |>
-  filter(!str_detect(tetenr, "^IO")) |>
-  filter(!str_detect(tetenr, "^LM")) |>
-  filter(!str_detect(tetenr, "^LP")) |>
-  filter(!str_detect(tetenr, "^MA")) |>
-  filter(!str_detect(tetenr, "^MO")) |>
-  filter(!str_detect(tetenr, "^R1")) |>
-  filter(!str_detect(tetenr, "^R2")) |>
-  filter(!str_detect(tetenr, "^SE")) |>
-  filter(!str_detect(tetenr, "^SP")) |>
-  filter(!str_detect(tetenr, "^V1")) |>
-  select(tetenr, temagr, mat_group_desc, desc) |>
-  filter(!str_detect(tetenr, "^F")) |>    
-  filter(!str_detect(tetenr, "^I")) |>    
-  filter(!str_detect(tetenr, "^SP"))
+  filter(!str_detect(item, "^E1")) |>
+  filter(!str_detect(item, "^E2")) |>
+  filter(!str_detect(item, "^F0")) |>
+  filter(!str_detect(item, "^FA")) |>
+  filter(!str_detect(item, "^IO")) |>
+  filter(!str_detect(item, "^LM")) |>
+  filter(!str_detect(item, "^LP")) |>
+  filter(!str_detect(item, "^MA")) |>
+  filter(!str_detect(item, "^MO")) |>
+  filter(!str_detect(item, "^R1")) |>
+  filter(!str_detect(item, "^R2")) |>
+  filter(!str_detect(item, "^SE")) |>
+  filter(!str_detect(item, "^SP")) |>
+  filter(!str_detect(item, "^V1")) |>
+  select(item, xp_temagr, xp_mat_group_desc, desc) |>
+  filter(!str_detect(item, "^F")) |>    
+  filter(!str_detect(item, "^I")) |>    
+  filter(!str_detect(item, "^SP"))
 
 
 
@@ -235,14 +215,14 @@ mp <-
 ```{r}
 to_imp_itens <-    
   itens |> 
-  filter(tetenr %in% mp_cmp)  
+  filter(item %in% mp_cmp)  
 
 to_imp_itens <-    
   set_item_family(to_imp_itens)   
 
 # Estes dados servem para importar em massa # Antes é preciso criar as famílias 
 manualmente to_imp_itens |>    
-  select(estabelecimento, tetenr, desc, temagr, mat_group_desc, grupo_estoque, family) |> View()
+  select(estabelecimento, item, desc, temagr, mat_group_desc, grupo_estoque, family) |> View()
 
 ```
 
@@ -255,7 +235,7 @@ Vamos criar aqui o processo para importar os produtos de 1 item F
 item_f <- "F02023004001A"
 
 itens |> 
-  filter(str_detect(tetenr, item_f)) |> 
+  filter(str_detect(item, item_f)) |> 
   select(estabelecimento = empresa, 
          item = tetenr,
          desc,

@@ -95,7 +95,7 @@ Os dados da aba "Parâmetros ERP" são importados do ERP.
 
     -   Ordem:
 
-        -    Trabalha com ordem dedicada mesmo se houver estoque.
+        -   Trabalha com ordem dedicada mesmo se houver estoque.
 
     -   Nível Superior (MTO no Proteus):
 
@@ -121,7 +121,7 @@ Obs.: Real Consumo e Estoque de Segurança geram conflito, não devem ser config
 
 #### Parâmetros do APS
 
-![Parâmetros do APS](./images/aps/db0106-1.png){alt="Parâmetros do APS" width="500"}
+![Parâmetros do APS](./images/aps/db0106-1.png){width="500"}
 
 -   Malha:
 

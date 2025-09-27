@@ -1,0 +1,160 @@
+---
+title: "Acabados e Semiacabados"
+author: "Simoldes"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(readxl)
+library(here)
+
+```
+
+## TCROSS
+
+Levantar códigos dos itens
+
+```{r}
+
+source("R/read-itens.R")
+
+#filename_itens <- here("data", "Artigos 2025-07-08.xlsx")
+filename_itens <- here("data", "Artigos 2025-09-02.xlsx")
+
+itens <- read_itens(filename_itens)
+
+tcross <- 
+  itens |> 
+  filter(str_detect(teprgr, "216")) |> 
+  group_by(item = tetenr) |> 
+  summarise(cod = first(teprgr),
+            desc = first(desc),
+            cod_comp = first(tezinr)) |> 
+  filter(str_detect(item, "^F") |
+           str_detect(item, "^I")) |> 
+  mutate(fam_mat = case_when(
+    str_detect(cod, "216T") & str_detect(item, "^F") ~ "10VW216T",
+    str_detect(cod, "216T") & str_detect(item, "^I") ~ "20VW216T",
+    str_detect(cod, "216C") & str_detect(item, "^F") ~ "10VW216C",
+    str_detect(cod, "216C") & str_detect(item, "^I") ~ "20VW216C",
+    str_detect(cod, "216U") & str_detect(item, "^F") ~ "10VW216U",
+    str_detect(cod, "216U") & str_detect(item, "^I") ~ "20VW216U",
+    str_detect(cod, "216L") & str_detect(item, "^F") ~ "10VW216L",
+    str_detect(cod, "216L") & str_detect(item, "^I") ~ "20VW216L",
+    TRUE ~ NA
+  )) |> 
+  filter(!is.na(fam_mat)) 
+
+tcross |> View()
+```
+
+You can add options to executable code like thisption disables the printing of code (only output is displayed).
+
+## TERA
+
+Levantar códigos dos itens
+
+```{r}
+
+source("R/read-itens.R")
+
+#filename_itens <- here("data", "Artigos 2025-07-08.xlsx")
+filename_itens <- here("data", "Artigos 2025-09-02.xlsx")
+
+itens <- read_itens(filename_itens)
+
+tcross <- 
+  itens |> 
+  filter(str_detect(teprgr, "246")) |> View()
+  group_by(item = tetenr) |> 
+  summarise(cod = first(teprgr),
+            desc = first(desc),
+            cod_comp = first(tezinr)) |> 
+  filter(str_detect(item, "^F") |
+           str_detect(item, "^I")) |> 
+  mutate(fam_mat = case_when(
+    str_detect(cod, "216T") & str_detect(item, "^F") ~ "10VW216T",
+    str_detect(cod, "216T") & str_detect(item, "^I") ~ "20VW216T",
+    str_detect(cod, "216C") & str_detect(item, "^F") ~ "10VW216C",
+    str_detect(cod, "216C") & str_detect(item, "^I") ~ "20VW216C",
+    str_detect(cod, "216U") & str_detect(item, "^F") ~ "10VW216U",
+    str_detect(cod, "216U") & str_detect(item, "^I") ~ "20VW216U",
+    str_detect(cod, "216L") & str_detect(item, "^F") ~ "10VW216L",
+    str_detect(cod, "216L") & str_detect(item, "^I") ~ "20VW216L",
+    TRUE ~ NA
+  )) |> 
+  filter(!is.na(fam_mat)) 
+
+tcross |> View()
+```
+
+You can add options to executable code like thisption disables the printing of code (only output is displayed).
+
+```{r}
+
+jit <- c("F01123034001A",
+         "F01123034003A",
+         "F01123034004A",
+         "F01123003001A",
+         "F01123003002A",
+         "F01123012001A",
+         "F01123012002A",
+         "F01123034005A",
+         "F01123034004A",
+         "F01123034003A",
+         "F01123034001A",
+         "F01123021003A",
+         "F01123021004A",
+         "F01123021005A",
+         "F01123021007A",
+         "F01716030015A",
+         "F01716002051A",
+         "F01716003039A",
+         "F01716031015A",
+         "F01123012001A",
+         "F01123012002A"
+         )
+
+jit <- 
+itens |> 
+  filter(tetenr %in% jit)  |>
+  mutate(estabelecimento = "102") |> 
+  select(item = tetenr, fam_mat = teprgr, desc = desc, cod_comp = tezinr, un, estabelecimento) |> 
+  mutate(fam_mat = "10VWTERA") |> 
+  View()
+  write_csv("jit.csv")
+
+
+importar <- 
+  importar |> 
+  group_by(item) |> 
+  summarise(desc = first(desc),
+            fam_mat = first(familia_ds),
+            un = first(un)) |> 
+  mutate(grupo_estoque = str_sub(fam_mat, start = 1L, end = 2L),
+         fam_com = " ",
+         estabelecimento = "102",
+         cod_complementar = " ")
+```
+
+Achar MP de item F
+
+```{r}
+
+itemF <- "F01123012002A"
+
+source("R/read-itens.R")
+itens <- read_itens(here("data", "Artigos 2025-09-02.xlsx"))
+
+source("R/read-bom.R")
+bom <- read_bom(here("data", "BOM 2025-09-02.xlsx"))
+
+mp <- get_itens_of_bom(get_bom_from_id(itemF, bom), itens)
+
+source("R/mass-import-datasul.R")
+
+mp_to_cd0209(mp, "mp_F01123012002A.lst")
+```
