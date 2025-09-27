@@ -73,14 +73,15 @@ get_itens_of_bom <- function(bom, itens) {
   bom_itens <-
     itens |>
     filter(tetenr %in% bom_components) |>
-    select(id = tetenr,
+    select(item = tetenr,
            desc,
            grupo_estoque,
            # fam_mat = familia,
            fam_com = teprgr,
+           fam_mat = family,
            un,
            estabelecimento,
-           cod_complementar = tezinr)
+           cod_comp = tezinr)
 }
 
 get_mp_cmp_from_item_bom <- function(item_bom) {
