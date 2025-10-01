@@ -13,8 +13,9 @@
 #       cod_comp
 # out_file é o nome do arquivo gerado
 mp_to_cd0209 <- function(components, out_file) {
-
-  components <- mp
+#
+#   components <- bom_mp
+#   out_file <- "teste.out"
 
   # Para importar matéria primas, vamos utilizar a listagem de
   # "Já Cadastrados" para avaliar se é uma nova inclusão ou uma atualização
@@ -64,7 +65,7 @@ mp_to_cd0209 <- function(components, out_file) {
       imagem = "",
       narrativa = "",
       estabelecimento = "102",
-      fam_com = ifelse(str_detect(item, "^F"), "", str_sub(fam_mat, start = 3L, end = 8L))
+      fam_com = ""
     ) |>
     select(
       tipo_trx,

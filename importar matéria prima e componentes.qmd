@@ -19,3 +19,53 @@ library(scales)
 Lista de Matérias Primas Utilizadas por Produto.
 
 Importação de Matérias Primas e Componentes
+
+```{r}
+# Lista de F que vamos importar
+p_importar <- read_rds("data/p-importar.rds")
+
+t_cross <- 
+  p_importar |>
+  filter(str_detect(prj_sigla, "CUV"))
+
+
+
+
+```
+
+Buscar MP dos itens para importar
+
+```{r}
+
+# BOM
+bom_f <- 
+  t_cross |> 
+  pull(item) |> 
+  map(~ get_bom_from_id(., bom)) |>
+  reduce(rbind)
+
+bom_mp <- get_mp_from_bom(bom_f, itens) 
+
+fam_cla_sheets <- excel_sheets(path = here("data", "2025-09-19 classif fam mp.xlsx"))
+fam_cla <- read_excel(path = here("data", "2025-09-19 classif fam mp.xlsx"), 
+                      sheet = fam_cla_sheets[6]) |> 
+  janitor::clean_names() |> 
+  distinct(item, familia_ds) |> 
+  select(item, fam_mat = familia_ds) 
+
+bom_mp <- bom_mp |> left_join(fam_cla) |> 
+  mutate(fam_mat = as.character(fam_mat))
+
+bom_mp |> View()
+ja_cadastrados <- read_excel(here("data", "jah_cadastrados.xlsx")) |> 
+  janitor::clean_names() |> 
+  select(item, familia)
+
+bom_mp <- 
+  bom_mp |> left_join(ja_cadastrados, join_by("item")) 
+
+bom_mp |> select(item, desc, fam_mat, familia) |> View()
+
+mp_to_cd0209(bom_mp, "t-cross.lst")
+
+```

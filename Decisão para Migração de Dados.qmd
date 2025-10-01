@@ -23,12 +23,14 @@ library(scales)
 #| warning: false
 #| echo: false
 
-alcance <- read_rds("data/escopo-f.rds")
+## Versão original dos dados:
+#alcance <- read_rds("data/escopo-f.rds")
+alcance <- read_rds("data/alcance.rds")
 
 alcance <- 
   alcance |> 
-  mutate(prj2 = ifelse(is.na(prj2), "Sem Projeto", prj2)) |> 
-  mutate(prj = ifelse(is.na(prj), "Sem Prj", prj))
+  mutate(prj2 = ifelse(is.na(prj_sigla), "Sem Projeto", prj_sigla)) |> 
+  mutate(prj = ifelse(is.na(prj_desc), "Sem Prj", prj_desc))
 
 total <- alcance |> distinct(item) |> nrow()
 para_importar <- alcance |>  filter(!is.na(year)) |> distinct(item) |> nrow()
@@ -136,4 +138,14 @@ alcance |>
   select(prj, prj2, year, item) |>
   group_map(~ ff_macro_table(.x))
 
+```
+
+## Export para Excel
+
+```{r}
+
+alcance |> 
+  group_by(prj_sigla) |> 
+  nest() |> 
+  map
 ```

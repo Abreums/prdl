@@ -27,7 +27,7 @@ get_component_base <- function(component, bom){
 }
 
 get_bom_from_id <- function(id, bom) {
-  #id = "F00717002045A"
+  #id = "F01123003001A"
   upper_bom <-
     bom |>
     filter(material_number == id)
@@ -72,29 +72,43 @@ get_itens_of_bom <- function(bom, itens) {
 
   bom_itens <-
     itens |>
-    filter(tetenr %in% bom_components) |>
-    select(item = tetenr,
+    filter(item %in% bom_components) |>
+    select(item,
            desc,
-           grupo_estoque,
-           # fam_mat = familia,
-           fam_com = teprgr,
-           fam_mat = family,
+           grupo_de_estoque,
            un,
-           estabelecimento,
-           cod_comp = tezinr)
+           estabelecimento)
 }
 
-get_mp_cmp_from_item_bom <- function(item_bom) {
-  mp_comp <-
-    item_bom |>
-    select(bom_component) |>
-    filter(!str_detect(bom_component, "^I")) |>
-    filter(!str_detect(bom_component, "^F")) |>
-    filter(!str_detect(bom_component, "^E1")) |>
-    filter(!str_detect(bom_component, "^E2")) |>
-    filter(!str_detect(bom_component, "^R1")) |>
-    filter(!str_detect(bom_component, "^V1")) |>
-    distinct(bom_component)
+get_mp_from_bom <- function(bom, itens) {
+  bom_components <-
+    bom |> pull(bom_component)
+
+  bom_itens <-
+    itens |>
+    filter(item %in% bom_components) |>
+    mutate(fam_com = "") |>
+    select(item,
+           desc,
+           grupo_de_estoque,
+           fam_com,
+           un,
+           estabelecimento,
+           cod_comp) |>
+    filter(!str_detect(item, "^I")) |>
+    filter(!str_detect(item, "^F")) |>
+    filter(!str_detect(item, "^E1")) |>
+    filter(!str_detect(item, "^E2")) |>
+    filter(!str_detect(item, "^R1")) |>
+    filter(!str_detect(item, "^V1")) |>
+    group_by(item) |>
+    summarise(desc = first(desc),
+              grupo_de_estoque = first(grupo_de_estoque),
+              un = first(un),
+              estabelecimento = first(estabelecimento),
+              fam_com = first(fam_com),
+              cod_comp = first(cod_comp)) |>
+    mutate(cod_comp = ifelse(is.na(cod_comp), " ", cod_comp))
 }
 
 build_bom <- function(component, bom) {
