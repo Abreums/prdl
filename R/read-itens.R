@@ -49,6 +49,17 @@ read_itens <- function(filename_itens = "default") {
              xp_tematc = tematc,
              xp_teprgr = teprgr,
              xp_fstext = fstext)
+
+}
+
+make_item_unique <- function(itens) {
+  itens <-
+    itens |>
+    arrange(estabelecimento) |>
+    group_by(item) |>
+    summarise(across(c(grupo_de_estoque, desc, desc2, un, prj_sigla, prj_desc,
+                       cod_comp, xp_temagr, xp_mat_group_desc, xp_tematc,
+                       xp_teprgr, xp_fstext), ~ first(.x)))
 }
 
 

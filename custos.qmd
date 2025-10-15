@@ -1,0 +1,138 @@
+---
+title: "Custos"
+format: html
+editor: visual
+---
+
+## Fechamentos de Custos
+
+-   Custos de produção
+
+-   Custos de compras
+
+Custeio das despesas viram GGF.
+
+Outros módulos que geram custos: folha de pagamento, manutenção, etc.
+
+Despesas de Investimentos.
+
+## Requisito
+
+-   OPs devem ser fechadas
+
+-   Notas não podem estar paradas no faturamento.
+
+    -   Emitiu nota fiscal e não baixou estoque - não é permitido.
+
+-   Sistema vai bloquear toda a movimentação no mês do fechamento.
+
+Temos que:
+
+-   Levantar os custos dos materiais
+
+-   Calcular GGF
+
+    -   Tudo o que vc comprou vira despesa.
+
+    -   Lançamento contábil de rateio
+
+-   As despesas viram absorção que por sua vez passam para estoque fazendo os débitos e créditos.
+
+1.  Contratos
+    1.  Notas
+    2.  é a primeira fase dos custos
+2.  ...
+
+Hoje não tenho a composição desejada. É feita um bolo.
+
+Custos por absorção.
+
+Rotina de Rateio Contábil
+
+-   é preciso reavaliar em novembro
+
+### Primeira Fase:
+
+-   Analisar se as ordens estão credoras ou devedoras:
+
+    -   Ordens cujo apontamento não aconteceu
+
+    -   Ordens cuja movimentação de material não aconteceu
+
+-   Analisar material em trânsito:
+
+    -   compra de material ainda em trãnsito.
+
+### Fase de Fechamento:
+
+-   Pode dar erro no cálculo do Preço médio nos casos como:
+
+    -   Material que passou na qualidade no dia 30 e que foi liberado no dia 1 do mês seguinte.
+
+-   Preço médio calculado
+
+    -   Pode ser custeado por fase
+
+    -   MP - custo de compra
+
+    -   Material é calculado pela BOM
+
+    -   GGF pela BOP
+
+        -   Primeira fase do GGF:
+
+            -   Jogar as despesas dos Centros de Custos.
+
+            -   Ex.:
+
+                -   Centro de Custo da Injeção \| OP \|Horas \| Total Gasto = 500K
+
+                    -   3030 \| op1 - 1000 peças \| 2.000 horas \| 200
+
+                    -    \| op2 - 2.000 peças \| 3.000 horas \| 300
+
+                        -   para custos os tempos são os padrões (e não os reais).
+
+-   Edson: hoje não há acurácia nos tempos.
+
+    -   SPI está melhor que SPB.
+
+    -   Na migração do sistema isto precisa ser ajustado.
+
+    -   O custo real dos itens pode estar contaminado com tempos diferentes.
+
+    -   O resultado geral não muda.
+
+### pós-fechamento
+
+-   Registro de inventário: é o bloco K
+
+    -   precisa bater com o balancete
+
+    -   As contas patrimoniais do bloco K
+
+        -   Ativos: material próprio, materia prima em armazém de processo, material em processo (não pode haver, precisa encerrar todas as Ordens de Produção em aberto),
+
+        -   ver no CE0110 qual a conta contábil onde será registrado os materiais por armazéns.
+
+    -    Ajustar as contas contábeis para fazermos o fechamento.
+
+## Pré Fechamento
+
+CS0530 - Relatório para começar pré-fechamento.
+
+# Fechamento
+
+Na ordem (fases):
+
+-   Comprados
+
+    -   contabiliza tudo
+
+    -   faz o rateio
+
+    -   descontabiliza
+
+-   Manutenção
+
+-   produção

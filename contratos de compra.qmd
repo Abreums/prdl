@@ -1,0 +1,124 @@
+---
+title: "Contratos de Compras"
+author: "Simoldes"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(here)
+library(readxl)
+
+```
+
+Fornecedores
+
+```{r}
+
+# Fornecedores
+## Atenção! usar arquivo "Clientes e Fornecedores" !!!
+# Old # fo_file <- here("data", "Fornecedores Simoldes 2025 junho.xlsx")
+# Old # fo2_file <- here("data", "Clientes e Fornecedores 2025-07-09.xlsx")
+fo_file <- here::here("data", "Fornecedore 2025-10-08.xlsx")
+fo <- readxl::read_excel(path = fo_file) |> 
+  janitor::clean_names() |> 
+  select(#empresa,
+         fo_id = lilinr,
+         fo_matchcode = limatc,
+         fo_name = liname,
+         fo_name2 = likuna,
+         fo_end1 = libran,
+         fo_end2 = listra,
+         fo_uf = krbdst,
+         fo_cep = lipolz,
+         fo_cidade = liwort,
+         fo_cnpj = liidnr,
+         fo_ie = kridbs,
+         fo_country = liidld
+         ) |> 
+  mutate(fo_id = as.character(fo_id))
+
+
+fo |> glimpse()
+
+fo |> View()
+
+
+```
+
+Ler contratos
+
+```{r}
+
+# Contratos de Compra
+cc_file <- here("data", "Contratos de Compra 2025-10-07.xlsx")
+
+cc <- readxl::read_excel(path = cc_file) |> 
+  janitor::clean_names() |> 
+  select(item = botenr,
+         estabelecimento = bofirm,
+         fo_id = bolinr,
+         preco = bop001,
+         moeda = bowacd,
+         cc_id = bokonr,
+         dt_inicio = boguvo,
+         dt_termino = bogubi)
+
+cc <- 
+  cc |> 
+  left_join(itens |> distinct(item, desc), join_by(item)) |> 
+  left_join(fo |> select(fo_id, fo_matchcode, fo_name), join_by(fo_id)) |> 
+  filter(!str_detect(fo_matchcode, "SIMOLDES")) |> 
+  select(estabelecimento, item, desc, fo_id, fo_matchcode, fo_name, cc_id, dt_inicio, dt_termino, preco, moeda) |> 
+  mutate(fo_matchcode = ifelse(is.na(fo_matchcode), fo_name, fo_matchcode)) |> 
+  group_by(item, fo_id, cc_id) |> 
+  summarise_all(list(first)) |> 
+  select(fornecedor_id = fo_id, matchcode = fo_matchcode, forn_name = fo_name, estabelecimento, contrato_id = cc_id, item, desc, dt_inicio, dt_termino, preco, moeda)
+
+cc |> nrow()
+cc |> View()
+
+cc |> write_csv("contratos.csv")
+
+cc |> glimpse()
+
+cc |> 
+  group_by(fo_id, item, estabelecimento) |> 
+  nest() |> View()
+  mutate(tam = map(data, ~ . |> nrow() > 1)) |> 
+  filter(tam == TRUE) |> 
+  unnest() |> 
+  select(-tam) |> 
+  View()
+
+# falta idenrificar as situações onde o mesmo item com o mesmo fornecedor para comparar os preços.
+```
+
+Ler itens
+
+```{r}
+
+
+p_importar <- read_rds("data/p-importar.rds")
+
+mp <- 
+  p_importar |> 
+  select(item) |> 
+  pull(item) |> 
+  map(~ get_mp_from_bom(get_bom_from_id(., bom), itens)) |> 
+  reduce(rbind)
+
+mp <- 
+  mp |> 
+  group_by(item) |> 
+  summarise(desc = first(desc),
+            grupo_de_estoque = first(grupo_de_estoque),
+            un = first(un),
+            estabelecimento = first(estabelecimento),
+            fam_com = first(fam_com),
+            cod_comp = first(cod_comp))
+
+
+```
