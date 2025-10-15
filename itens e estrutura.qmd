@@ -22,7 +22,7 @@ Carga de dados exportadas do XPert.
 
 source("R/read-itens.R")
 itens <- read_itens()
-
+itens <- make_item_unique(itens)
 projetos <- 
   itens |> 
   filter(str_detect(item, "^F")) 
