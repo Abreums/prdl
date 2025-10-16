@@ -300,7 +300,7 @@ mp_to_cd0209 <- function(df, out_file) {
   #   mutate(desc = iconv(desc,to="ASCII//TRANSLIT")) |>
   #   mutate(grupo_estoque = str_sub(fam_mat, start = 1L, end = 2L))
 
-  out_file = "teste.lst"
+  out_file = "trafrubber.lst"
   to_exp <-
     df |>
     mutate(fo_country = "BRASIL") |>
