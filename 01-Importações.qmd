@@ -4,6 +4,9 @@ author: "Simoldes"
 ---
 
 ```{r}
+#| echo: false
+#| warning: false
+
 library(tidyverse)
 library(janitor)
 library(readxl)
@@ -12,6 +15,8 @@ library(cellranger)
 library(gdata)
 
 ```
+
+Este arquivo contém referência para o conjunto de importações necessárias para migração de dados do XPERT.
 
 ## Itens
 
