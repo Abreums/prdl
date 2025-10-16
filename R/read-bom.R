@@ -9,8 +9,8 @@
 # use:
 # get_itens_of_bom(a_specific_bom, system_item) para obter uma lista das materias primas da bom
 
-read_bom <- function(bom_file) {
-  bom <- readxl::read_excel(bom_file) |>
+read_bom <- function(bom_file = "BOM 2025-09-02.xlsx") {
+  bom <- readxl::read_excel(here::here("data", bom_file)) |>
     janitor::clean_names()
 }
 
@@ -27,7 +27,8 @@ get_component_base <- function(component, bom){
 }
 
 get_bom_from_id <- function(id, bom) {
-  #id = "F01123003001A"
+  # id = "F01123003001A"
+  # id = "F00322003001B" # empty
   upper_bom <-
     bom |>
     filter(material_number == id)
@@ -35,12 +36,12 @@ get_bom_from_id <- function(id, bom) {
   final_bom <- upper_bom
   sub_bom <- upper_bom
 
-  print(sub_bom |> first() |> pull(material_number))
+  #print(sub_bom |> first() |> pull(material_number))
   while(nrow(sub_bom) != 0){
     sub_bom <-
       get_bom_component(upper_bom) |>
       get_component_base(bom)
-    print(sub_bom |> first() |> pull(material_number))
+    #print(sub_bom |> first() |> pull(material_number))
 
     if(nrow(sub_bom)){
       final_bom <-
@@ -52,6 +53,11 @@ get_bom_from_id <- function(id, bom) {
   final_bom  <-
     final_bom |>
     mutate(estabelecimento = ifelse(plant == "SPB", 103, ifelse(plant == "SPI", 102, NA)))
+
+  if(nrow(final_bom) == 0) {
+    return(NA)
+  }
+  return(final_bom)
 }
 
 

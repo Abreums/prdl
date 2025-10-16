@@ -62,6 +62,25 @@ make_item_unique <- function(itens) {
                        xp_teprgr, xp_fstext), ~ first(.x)))
 }
 
+get_finished_itens <- function(itens) {
+  # Apenas itens acabados "F"
+  f_itens <-
+    itens |>
+    filter(str_detect(item, "^F"))
+
+  source("R/read-bom.R")
+  bom <- read_bom()
+
+  f_itens <-
+    f_itens |>
+    mutate(item_bom = map(item, ~ get_bom_from_id(., bom)))
+
+  f_itens <-
+    f_itens |>
+    filter(!is.na(item_bom))
+
+}
+
 
 set_item_family <- function(df_item) {
   # df_item <- to_imp_itens
@@ -76,7 +95,7 @@ set_item_family <- function(df_item) {
       str_detect(tipo_de_materiais, "Operating supplies") ~ "60",
       str_detect(tipo_de_materiais, "Services") ~ "30",
       str_detect(tipo_de_materiais, "Finished Products") ~ "10",
-      str_detect(tipo_de_materiais, "Product resource/tools") ~ "50",
+    str_detect(tipo_de_materiais, "Product resource/tools") ~ "50",
       str_detect(tipo_de_materiais, "Services") ~ "99",
       str_detect(tipo_de_materiais, "SNon-Stock Material") ~ "99",
       TRUE ~ "99"

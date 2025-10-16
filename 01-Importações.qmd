@@ -18,7 +18,23 @@ library(gdata)
 
 Este arquivo contém referência para o conjunto de importações necessárias para migração de dados do XPERT.
 
-## Itens
+Lista de importações:
+
+-   Itens
+
+    -   Finais
+
+    -   Intermediários
+
+    -   Matéria Prima
+
+-   Estruturas (BOM)
+
+-   Processos (BOP)
+
+-   Fornecedores
+
+# Itens
 
 Carga de dados exportadas do XPert.
 
@@ -27,13 +43,176 @@ Carga de dados exportadas do XPert.
 
 source("R/read-itens.R")
 itens <- read_itens()
-itens <- make_item_unique(itens)
-projetos <- 
-  itens |> 
-  filter(str_detect(item, "^F")) 
 
-projetos |> write_rds("data/projetos.rds")
-projetos <- read_rds("data/projetos.rds")
+itens |> write_rds("data/itens.rds")
+itens <- read_rds("data/itens.rds")
+
+
+```
+
+## Finais
+
+Itens acabados ou finais inicial com código F.
+
+Vamos importar apenas aqueles que estiverem ativos (que possuem BOM).
+
+Portugal enviou apenas a lista de itens "Ativos", porém, há itens ativos sem BOM. Estes não serão importados.
+
+Também vamos identificar itens com código do cliente duplicado. Por exemplo, 2 códigos F diferentes com o mesmo código do cliente implica em erro de cadastro. Serão encaminhados para a Engenharia ajustar.
+
+```{r}
+
+# busca lista de peças acabadas que possuem estrutura de produto
+f_itens <- get_finished_itens(itens)
+
+# Precisamos reduzir os itens acabados apenas ao sub-grupo dos itens vigentes.
+# vamos utilizar o critério de filtro dos itens presente na Carteira de Pedido
+# dos últimos meses.
+
+source("R/carteira-pedidos.R")  
+pedidos <- get_order_history()  
+# Vamos excluir os pedidos que não são de montadoras.
+pedidos <-
+  pedidos |>
+  filter(
+    !customer %in% c(
+      "BELLS INDUSTRIA",
+      "BIOPLASTICOS",
+      "CEMAS DO BRASIL",
+      "FAURECIA",
+      "FAURECIA AUTOMOT. BRASIL",
+      "FWC GANCHEIRAS",
+      "HB - SMR LOCACAO DE",
+      "HB SMR SP 0008-73",
+      "INDUSERVICE SERVICOS",
+      "KUNST",
+      "LINKPLAS IND.PLASTIC",
+      "MADIS CONFECCOES",
+      "NEW TECH COMPANY",
+      "NILKO TECNOLOGIA LTD",
+      "OMEGA RECYCLING",
+      "PKS PLASTICOS",
+      "PLASMAPLAST",
+      "SIMOLDES ACOS BRASIL",
+      "SIMOLDES PLASTICOS",
+      "SPI",
+      "SUMMA POLIMEROS"
+    )
+  )
+pedidos |> write_rds("data/carteira-pedidos.RDS")
+pedidos <- read_rds("data/carteira-pedidos.RDS")
+
+
+#### Relatórios de Vendas
+source("R/read-vendas.R")  
+spb_vendas <- 
+  get_itens_from_branch("SPB") 
+spb_vendas <-
+  spb_vendas |>
+  mutate(filial = "SPB")
+spi_vendas <- 
+  get_itens_from_branch("SPI") 
+spi_vendas <- 
+  spi_vendas |> 
+  mutate(filial = "SPI")  
+
+vendas <- 
+  rbind(spb_vendas, spi_vendas)
+
+vendas <- 
+  vendas |> 
+  mutate(year = year(as.Date(status))) |> 
+  group_by(item) |> 
+  summarise(year = max(year))
+
+# acrescentar informações de projeto
+vendas <- 
+  vendas |> 
+  left_join(itens |> select(item, prj_sigla, prj_desc)) |>
+  group_by(item, prj_sigla, prj_desc) |> 
+  summarise(year = max(year, na.rm = TRUE)) |> 
+  filter(str_detect(item, "^F"))
+
+vendas |> write_rds("data/vendas.rds")
+vendas <- read_rds("data/vendas.rds")
+
+## Vamos juntar os dados da Carteira de Pedidos com Vendas:
+# Vamos importar todos os produtos que aparecem nos relatórios de 
+# Pedidos de Vendas 2025
+pedidos_e_vendas <- 
+  pedidos |>
+  mutate(year = year(order_date)) |> 
+  group_by(item) |> 
+  summarise(year = max(year)) |> 
+  left_join(itens |> select(item, prj_sigla, prj_desc)) |> 
+  distinct(prj_sigla, prj_desc, year, item) |> 
+  filter(str_detect(item, "^F"))
+
+# Vamos acrescentar os produtos vendidos desde 2023
+pedidos_e_vendas <-
+  pedidos_e_vendas |> 
+  rbind(vendas) |> 
+  group_by(item) |> 
+  summarise(prj_sigla = first(prj_sigla, na.rm = TRUE),
+            prj_desc = first(prj_desc, na.rm = TRUE),
+            year = max(year)) |> 
+  select(item, prj_sigla, prj_desc, year) |> 
+  filter(str_detect(item, "^F"))
+
+pedidos_e_vendas |> write_rds("data/p-importar.rds")
+pedidos_e_vendas <- read_rds("data/p-importar.rds")
+
+# Vamos reduzir os códigos F apenas para aqueles que aparecem 
+# em pedidos_e_vendas
+
+f_itens_excluidos <- 
+  pedidos_e_vendas |> 
+  anti_join(f_itens)
+f_itens_excluidos |> View()
+
+f_simoldes <- 
+  pedidos_e_vendas |> 
+  left_join(f_itens) |> 
+  arrange(estabelecimento, cod_comp, item, prj_sigla)
+f_simoldes |> write_rds("data/f-simoldes.rds")
+f_simoldes <- read_rds("data/f-simoldes.rds")
+
+f_simoldes |> View()
+
+# vamos importar no XPert separadamente por estabelecimento.
+f_simoldes |> count(estabelecimento)
+
+# Códigos para achar itens duplicados:
+
+duplicados_comp <-
+  f_simoldes |>
+  count(cod_comp, s_ou_mr) |>
+  filter(n > 1) |>
+  filter(!str_detect(cod_comp, "^-"))
+
+duplicados <-
+  duplicados_comp |>
+  left_join(f_simoldes) |>
+  pivot_wider(names_from = estabelecimento, values_from = n) |>
+  arrange(cod_comp, prj_sigla, item)
+
+duplicados |> View()
+# 
+# duplicados |> write_csv("duplicados.csv")
+# 
+# source("R/read-bom.R")
+# bom <- read_bom()
+# 
+# t_b <- get_bom_from_id("F01612013002A", bom)
+# 
+# 
+# 
+# projetos <- 
+#   itens |> 
+#   filter(str_detect(item, "^F")) 
+# 
+# projetos |> write_rds("data/projetos.rds")
+# projetos <- read_rds("data/projetos.rds")
 
 ```
 
