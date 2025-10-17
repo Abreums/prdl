@@ -1,7 +1,6 @@
-# export itens cd0209
+# IMPORT ITENS CD0209
 
-
-# file_to_cd0209 prepara um arquivo com componentes para serem importados em massa
+# f_to_cd0209 prepara um arquivo com componentes para serem importados em massa
 # components é um tibble com os campos:
 #       item,
 #       desc,
@@ -12,9 +11,8 @@
 #       estabelecimento,
 #       cod_comp
 # out_file é o nome do arquivo gerado
-f_to_cd0209 <- function(f_df, out_file) {
 #
-#   components <- bom_mp
+f_to_cd0209 <- function(f_df, out_file) {
 
   # Para importar matéria primas, vamos utilizar a listagem de
   # "Já Cadastrados" para avaliar se é uma nova inclusão ou uma atualização
@@ -24,31 +22,10 @@ f_to_cd0209 <- function(f_df, out_file) {
     select(item) |>
     mutate(trx = 2)
 
-  f_df <- cadstr
-
-
   df <-
     f_df |>
     left_join(ja_cadastrados, join_by("item")) |>
     mutate(trx = ifelse(is.na(trx), 1, trx)) |>
-    mutate(un = case_when(
-      str_detect(item, "^20") ~ "KG",
-      str_detect(item, "^41") ~ "PC",
-      str_detect(item, "^42") ~ "PC",
-      str_detect(item, "^48") ~ "PC",
-      str_detect(item, "^49") ~ "PC",
-      str_detect(item, "^51") ~ "UN",
-      str_detect(item, "^52") ~ "UN",
-      str_detect(item, "^53") ~ "UN",
-      str_detect(item, "^54") ~ "UN",
-      str_detect(item, "^56") ~ "UN",
-      str_detect(item, "^57") ~ "UN",
-      str_detect(item, "^58") ~ "UN",
-      str_detect(item, "^71") ~ "KG",
-      str_detect(item, "^F") ~ "PC",
-      str_detect(item, "^I") ~ "PC",
-      TRUE ~ "UN"
-    )) |>
     mutate(desc = str_replace_all(desc, "[[:punct:]]", "")) |>
     mutate(desc = iconv(desc,to="ASCII//TRANSLIT")) |>
     mutate(grupo_estoque = 10)

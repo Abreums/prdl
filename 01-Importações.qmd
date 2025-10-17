@@ -162,6 +162,8 @@ pedidos_e_vendas <-
 pedidos_e_vendas |> write_rds("data/p-importar.rds")
 pedidos_e_vendas <- read_rds("data/p-importar.rds")
 
+pedidos_e_vendas |> write_csv2("codigos-f.csv")
+
 # Vamos reduzir os códigos F apenas para aqueles que aparecem 
 # em pedidos_e_vendas
 
@@ -173,14 +175,15 @@ f_itens_excluidos |> View()
 f_simoldes <- 
   pedidos_e_vendas |> 
   left_join(f_itens) |> 
-  arrange(estabelecimento, cod_comp, item, prj_sigla)
+  arrange(estabelecimento, cod_comp, item, prj_sigla) |> 
+  select(cod_comp, item, estabelecimento, desc, desc2,prj_sigla, prj_desc)
 f_simoldes |> write_rds("data/f-simoldes.rds")
 f_simoldes <- read_rds("data/f-simoldes.rds")
 
-f_simoldes |> View()
+f_simoldes |> write_csv2("codigos-f.csv")
 
 # vamos importar no XPert separadamente por estabelecimento.
-f_simoldes |> count(estabelecimento)
+f_simoldes |> View()
 
 # Códigos para achar itens duplicados:
 
@@ -193,10 +196,14 @@ duplicados_comp <-
 duplicados <-
   duplicados_comp |>
   left_join(f_simoldes) |>
-  pivot_wider(names_from = estabelecimento, values_from = n) |>
-  arrange(cod_comp, prj_sigla, item)
+#  pivot_wider(names_from = estabelecimento, values_from = n) |>
+  arrange(cod_comp, estabelecimento, prj_sigla, item) |> 
+  select(cod_comp, item, estabelecimento, prj_sigla, prj_desc, desc, desc2, un, 
+         xp_temagr, xp_tematc)
 
 duplicados |> View()
+
+duplicados |> write_csv("duplicados.csv")
 # 
 # duplicados |> write_csv("duplicados.csv")
 # 
@@ -213,6 +220,36 @@ duplicados |> View()
 # 
 # projetos |> write_rds("data/projetos.rds")
 # projetos <- read_rds("data/projetos.rds")
+
+```
+
+## Importar SPI & SPB
+
+```{r}
+
+f_spi <- 
+  f_simoldes |>
+  filter(estabelecimento == "SPI") |> 
+  select(item) |> 
+  distinct(item)
+f_spi |> nrow()
+
+f_spb <- 
+  f_simoldes |> 
+  filter(estabelecimento == "SPB") |> 
+  select(item) |> 
+  distinct(item)
+f_spb |> nrow()
+
+f_spi <- 
+  f_spi |> 
+  left_join(itens |> filter(estabelecimento == "SPI")) 
+
+f_spb <- 
+  f_spb |> 
+  left_join(itens |> filter(estabelecimento == "SPB"))
+
+source("R/import-f.R")
 
 ```
 
