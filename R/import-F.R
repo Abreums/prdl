@@ -12,7 +12,7 @@
 #       cod_comp
 # out_file é o nome do arquivo gerado
 #
-f_to_cd0209 <- function(f_df, out_file) {
+f_to_cd0209 <- function(f_df, out_file = "default.lst") {
 
   # Para importar matéria primas, vamos utilizar a listagem de
   # "Já Cadastrados" para avaliar se é uma nova inclusão ou uma atualização
@@ -27,16 +27,8 @@ f_to_cd0209 <- function(f_df, out_file) {
     left_join(ja_cadastrados, join_by("item")) |>
     mutate(trx = ifelse(is.na(trx), 1, trx)) |>
     mutate(desc = str_replace_all(desc, "[[:punct:]]", "")) |>
-    mutate(desc = iconv(desc,to="ASCII//TRANSLIT")) |>
-    mutate(grupo_estoque = 10)
+    mutate(desc = iconv(desc,to="ASCII//TRANSLIT"))
 
-  df <-
-    df |>
-    mutate(fam_mat = case_when(
-      str_detect(prj_sigla, "216") ~ "10VW216",
-      str_detect(prj_sigla, "MQB") ~ "10VWMQB",
-      TRUE ~ NA
-    ))
 
   to_exp <-
     df |>
@@ -52,8 +44,7 @@ f_to_cd0209 <- function(f_df, out_file) {
       info = "",
       imagem = "",
       narrativa = "",
-      estabelecimento = "102",
-      fam_com = ""
+      estabelecimento = ifelse(estabelecimento == "SPI", "102", "103")
     ) |>
     select(
       tipo_trx,
@@ -156,8 +147,6 @@ f_to_cd0209 <- function(f_df, out_file) {
   #   +----------------------------------------------------------------------------------------------------------------------------------+
   #
   #
-
-  out_file <- "vw_import.lst"
 
   gdata::write.fwf(
     x = to_exp,

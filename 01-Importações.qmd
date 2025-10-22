@@ -43,9 +43,32 @@ Carga de dados exportadas do XPert.
 
 source("R/read-itens.R")
 itens <- read_itens()
+s_itens <- read_itens_summary()
 
 itens |> write_rds("data/itens.rds")
 itens <- read_rds("data/itens.rds")
+
+itens |> View()
+
+```
+
+### Preços
+
+Informações de preços extraídas pelo Williiam
+
+```{r}
+precos <- 
+  readxl::read_excel(here::here("data", "Tabela de precos_SPI_SPB_XPERT.xlsx")) |> 
+  janitor::clean_names() |> 
+  filter(!str_detect(nome_local_de_descarga, "^AMOSTRA"),
+         !str_detect(nome_local_de_descarga, "^TESTE"),
+         !str_detect(nome_local_de_descarga, "^REM DE TESTE"),
+         !str_detect(nome_local_de_descarga, "^PROJETO"),
+         !str_detect(nome_local_de_descarga, "^PEDIDO FECHADO PROJETO")
+         ) |> 
+  filter(preco > 1000)
+
+precos  |> glimpse()
 
 
 ```
@@ -63,7 +86,7 @@ Também vamos identificar itens com código do cliente duplicado. Por exemplo, 2
 ```{r}
 
 # busca lista de peças acabadas que possuem estrutura de produto
-f_itens <- get_finished_itens(itens)
+f_itens <- get_finished_itens(s_itens)
 
 # Precisamos reduzir os itens acabados apenas ao sub-grupo dos itens vigentes.
 # vamos utilizar o critério de filtro dos itens presente na Carteira de Pedido
@@ -164,26 +187,28 @@ pedidos_e_vendas <- read_rds("data/p-importar.rds")
 
 pedidos_e_vendas |> write_csv2("codigos-f.csv")
 
-# Vamos reduzir os códigos F apenas para aqueles que aparecem 
-# em pedidos_e_vendas
 
-f_itens_excluidos <- 
-  pedidos_e_vendas |> 
-  anti_join(f_itens)
-f_itens_excluidos |> View()
-
+# F SIMOLDES
 f_simoldes <- 
   pedidos_e_vendas |> 
   left_join(f_itens) |> 
   arrange(estabelecimento, cod_comp, item, prj_sigla) |> 
-  select(cod_comp, item, estabelecimento, desc, desc2,prj_sigla, prj_desc)
+  select(cod_comp, item, estabelecimento, desc, desc2,prj_sigla, prj_desc, ncm)
 f_simoldes |> write_rds("data/f-simoldes.rds")
 f_simoldes <- read_rds("data/f-simoldes.rds")
 
-f_simoldes |> write_csv2("codigos-f.csv")
 
 # vamos importar no XPert separadamente por estabelecimento.
 f_simoldes |> View()
+
+
+
+# Vamos reduzir os códigos F apenas para aqueles que aparecem 
+# em pedidos_e_vendas
+f_itens_excluidos <- 
+  pedidos_e_vendas |> 
+  anti_join(f_itens)
+f_itens_excluidos |> View()
 
 # Códigos para achar itens duplicados:
 
@@ -223,7 +248,36 @@ duplicados |> write_csv("duplicados.csv")
 
 ```
 
-## Importar SPI & SPB
+## Preço
+
+```{r}
+itens_com_preco <-
+  f_itens |>
+  left_join(precos |> 
+              select(numero_artigo, cliente, nome_cliente,
+                     preco, valido_de, valido_ate, 
+                     nome_local_de_descarga, 
+                     numero_do_pedido_de_fecho),
+            join_by(item == numero_artigo)) |> 
+  filter(cliente %in% c(991, 992, 1001, 1003, 1004, 1005, 1050, 1051, 1070,
+                        1088, 1119, 1120, 1137, 1484, 1817, 1868, 2405, 2437,
+                        2815, 2964, 2995, 3139))
+
+
+itens_com_preco |> nrow()
+
+importar_codigos <- 
+  pedidos_e_vendas |> 
+  left_join(itens_com_preco, join_by(item == item)) |> 
+  mutate(cod_comp = str_trim(cod_comp, side = "both")) |> 
+  mutate(cod_comp = str_replace_all(cod_comp, " ", ""))  |> 
+  select(cod_comp, item, ncm, cliente, nome_cliente, estabelecimento)
+
+importar_codigos |> write.csv2("importar-codigos.csv")
+
+```
+
+## Importar SPI 
 
 ```{r}
 
@@ -243,14 +297,238 @@ f_spb |> nrow()
 
 f_spi <- 
   f_spi |> 
-  left_join(itens |> filter(estabelecimento == "SPI")) 
+  left_join(s_itens |> filter(estabelecimento == "SPI")) 
+
+f_spi <- 
+  f_spi |>
+  mutate(grupo_estoque = "10") |> 
+  mutate(fam_mat = case_when(
+    str_detect(prj_sigla, "CX") ~   "10CXPLST",
+    str_detect(prj_sigla, "X70") ~  "10RNX70",
+    str_detect(prj_sigla, "X62") ~  "10RNX70",
+    str_detect(prj_sigla, "1312") ~ "10RN1312",
+    str_detect(prj_sigla, "VIVA") ~ "10GMVIVA",
+    str_detect(prj_sigla, "V230") ~ "10VWGOLF",
+    str_detect(prj_sigla, "UPPP") ~ "10VWUP",
+    str_detect(prj_sigla, "UPC") ~  "10VWUP",
+    str_detect(prj_sigla, "UP") ~   "10VWUP",
+    str_detect(prj_sigla, "U79P") ~ "10RNU79",
+    str_detect(prj_sigla, "SCXD") ~ "10PCSC",
+    str_detect(prj_sigla, "SCDI") ~ "10PCSC",
+    str_detect(prj_sigla, "PM7") ~  "10GMPM7",
+    str_detect(prj_sigla, "PA") ~   "10XXPA",
+    str_detect(prj_sigla, "P426") ~ "10VV426",
+    str_detect(prj_sigla, "OTH") ~  "10OUTROS",
+    str_detect(prj_sigla, "NTC") ~  "10MBNTC",
+    str_detect(prj_sigla, "NCG") ~  "10SCNCG",
+    str_detect(prj_sigla, "MQBF") ~ "10VWMQB",
+    str_detect(prj_sigla, "MQB") ~  "10VWMQB",
+    str_detect(prj_sigla, "LTC") ~  "10MBLTC",
+    str_detect(prj_sigla, "L98") ~  "10XXL98",
+    str_detect(prj_sigla, "HPN") ~  "10XXHPN",
+    str_detect(prj_sigla, "HJF") ~  "10RNHJF",
+    str_detect(prj_sigla, "HJDE") ~ "10RNHJDE",
+    str_detect(prj_sigla, "HJDD") ~ "10RNHJDD",
+    str_detect(prj_sigla, "FX/J") ~ "10XXSTFX",
+    str_detect(prj_sigla, "FPN") ~  "10XXFPN",
+    str_detect(prj_sigla, "FOX") ~  "10VWFOX",
+    str_detect(prj_sigla, "F1H") ~  "10STF1H",
+    str_detect(prj_sigla, "CUVF") ~ "10VW246",
+    str_detect(prj_sigla, "CUV") ~  "10VW246",
+    str_detect(prj_sigla, "C4P") ~  "10PCC4",
+    str_detect(prj_sigla, "C4E") ~  "10PCC4",
+    str_detect(prj_sigla, "B02A") ~ "10RNB02A",
+    str_detect(prj_sigla, "AI94") ~ "10PCAI94",
+    str_detect(prj_sigla, "AI58") ~ "10PCAI58",
+    str_detect(prj_sigla, "A91") ~  "10PC208",
+    str_detect(prj_sigla, "516T") ~ "10ST516",
+    str_detect(prj_sigla, "270H") ~ "10VW270",
+    str_detect(prj_sigla, "23X") ~  "10VW23X",
+    str_detect(prj_sigla, "220P") ~ "10VW220",
+    str_detect(prj_sigla, "220C") ~ "10VW220",
+    str_detect(prj_sigla, "216T") ~ "10VW216",
+    str_detect(prj_sigla, "216C") ~ "10VW216",
+    TRUE ~ NA
+  )) |> 
+  mutate(fam_com = case_when(
+        str_detect(prj_sigla, "CX") ~ "CX",
+    str_detect(prj_sigla, "X70") ~  "RSA",
+    str_detect(prj_sigla, "X62") ~  "RSA",
+    str_detect(prj_sigla, "1312") ~ "RSA",
+    str_detect(prj_sigla, "VIVA") ~ "GMB",
+    str_detect(prj_sigla, "V230") ~ "VW",
+    str_detect(prj_sigla, "UPPP") ~ "VW",
+    str_detect(prj_sigla, "UPC") ~  "VW",
+    str_detect(prj_sigla, "UP") ~   "VW",
+    str_detect(prj_sigla, "U79P") ~ "RSA",
+    str_detect(prj_sigla, "SCXD") ~ "STEL",
+    str_detect(prj_sigla, "SCDI") ~ "STEL",
+    str_detect(prj_sigla, "PM7") ~  "GMB",
+    str_detect(prj_sigla, "PA") ~   "OUTROS",
+    str_detect(prj_sigla, "P426") ~ "VOLVO",
+    str_detect(prj_sigla, "OTH") ~  "OUTROS",
+    str_detect(prj_sigla, "NTC") ~  "MBB",
+    str_detect(prj_sigla, "NCG") ~  "SCANIA",
+    str_detect(prj_sigla, "MQBF") ~ "VW",
+    str_detect(prj_sigla, "MQB") ~  "VW",
+    str_detect(prj_sigla, "LTC") ~  "MBB",
+    str_detect(prj_sigla, "L98") ~  "OUTROS",
+    str_detect(prj_sigla, "HPN") ~  "OUTROS",
+    str_detect(prj_sigla, "HJF") ~  "RSA",
+    str_detect(prj_sigla, "HJDE") ~ "RSA",
+    str_detect(prj_sigla, "HJDD") ~ "RSA",
+    str_detect(prj_sigla, "FX/J") ~ "STEL",
+    str_detect(prj_sigla, "FPN") ~  "OUTROS",
+    str_detect(prj_sigla, "FOX") ~  "VW",
+    str_detect(prj_sigla, "F1H") ~  "STEL",
+    str_detect(prj_sigla, "CUVF") ~ "VW",
+    str_detect(prj_sigla, "CUV") ~  "VW",
+    str_detect(prj_sigla, "C4P") ~  "STEL",
+    str_detect(prj_sigla, "C4E") ~  "STEL",
+    str_detect(prj_sigla, "B02A") ~ "RSA",
+    str_detect(prj_sigla, "AI94") ~ "STEL",
+    str_detect(prj_sigla, "AI58") ~ "STEL",
+    str_detect(prj_sigla, "A91") ~  "STEL",
+    str_detect(prj_sigla, "516T") ~ "STEL",
+    str_detect(prj_sigla, "270H") ~ "VW",
+    str_detect(prj_sigla, "23X") ~  "VW",
+    str_detect(prj_sigla, "220P") ~ "VW",
+    str_detect(prj_sigla, "220C") ~ "VW",
+    str_detect(prj_sigla, "216T") ~ "VW",
+    str_detect(prj_sigla, "216C") ~ "VW",
+    TRUE ~ NA
+  )) |> 
+    select(item, 
+           desc,
+           grupo_estoque,
+           fam_mat,
+           fam_com,
+           un,
+           estabelecimento,
+           cod_comp)
+
+f_spi |> nrow()
+f_spi <- 
+  f_spi |> 
+  filter(!is.na(fam_mat)) |> 
+  filter(!is.na(fam_com)) 
+f_spi |> nrow()
+
+source("R/import-f.R")
+f_to_cd0209(f_spi, "f_spi.lst")
+
+
+
+```
+
+# Importar SPB
+
+```{r}
+
+f_spb <- 
+  f_simoldes |>
+  filter(estabelecimento == "SPB") |> 
+  select(item) |> 
+  distinct(item)
+f_spb |> nrow()
 
 f_spb <- 
   f_spb |> 
-  left_join(itens |> filter(estabelecimento == "SPB"))
+  left_join(s_itens |> filter(estabelecimento == "SPB")) 
+
+f_spb <- 
+  f_spb |> 
+  left_join(precos |> select(item = numero_artigo, cliente, nome_cliente), join_by(item))
+
+f_spb <- 
+  f_spb |>
+  mutate(grupo_estoque = "10") |> 
+  mutate(fam_mat = case_when(
+    str_detect(prj_sigla, "^CXPL") ~   "10CXPLST",
+    str_detect(prj_sigla, "^EVI") ~    "10MNEVI",
+    str_detect(prj_sigla, "^1312") ~   "10RN1312",
+    str_detect(prj_sigla, "^216") ~    "10RN216",
+    str_detect(prj_sigla, "^B90") ~    "10RNB90",
+    str_detect(prj_sigla, "^H79") ~    "10RNH79",
+    str_detect(prj_sigla, "^HHA") ~    "10RNHHA",
+    str_detect(prj_sigla, "^HJD") ~    "10RNHJD",
+    str_detect(prj_sigla, "^HJF") ~    "10RNHJF",
+    str_detect(prj_sigla, "^U79") ~    "10RNU79",
+    str_detect(prj_sigla, "^X52") ~    "10RNX52",
+    str_detect(prj_sigla, "^H61") ~    "10RNH61",
+    str_detect(prj_sigla, "^X62") ~    "10RNX62",
+    str_detect(prj_sigla, "^X65") ~    "10RNX65",
+    str_detect(prj_sigla, "^X70") ~    "10RNX70",
+    str_detect(prj_sigla, "^X84") ~    "10RNX84",
+    str_detect(prj_sigla, "^XBB") ~    "10RNXBB",
+    str_detect(prj_sigla, "^216") ~    "10VW216",
+    str_detect(prj_sigla, "^FOX") ~    "10VWFOX",
+    str_detect(prj_sigla, "^GOLF") ~    "10VWGOLF",
+    str_detect(prj_sigla, "^V230") ~    "10VWGOLF",
+    str_detect(prj_sigla, "^MQB") ~    "10VWMQB",
+    str_detect(prj_sigla, "^V216") ~    "10VWV216",
+    TRUE ~ NA
+  )) |> 
+  mutate(fam_com = case_when(
+    str_detect(fam_mat, "^10RN") ~ "RN",
+    str_detect(fam_mat, "^10VW") ~ "VW",
+    str_detect(fam_mat, "^10MN") ~ "MN",
+    str_detect(fam_mat, "^10CX") ~ "CX",
+    TRUE ~ NA
+  )) |> 
+  select(item, 
+           desc,
+           grupo_estoque,
+           fam_mat,
+           fam_com,
+           un,
+           estabelecimento,
+           cod_comp) |> 
+  filter(!is.na(fam_com)) |> 
+  filter(!is.na(fam_mat))
+
+f_spb |> nrow()
 
 source("R/import-f.R")
+f_to_cd0209(f_spb, "f_spb.lst")
 
+f_spb |>
+  select(item) |> 
+  left_join(precos, join_by(item == numero_artigo)) |> 
+  mutate(no_refa_cliente = str_replace_all(no_refa_cliente, " ", "")) |> 
+  filter(!is.na(preco)) |> 
+  write_csv2("f_spb.csv")
+
+
+
+
+```
+
+# Intermediários
+
+Importados separadamente os itens F, vamos retomar a lista de f-simoldes para achar e importar os intermediários
+
+```{r}
+
+# O número de peças do conjunto inicial f_simoldes é maior do que 
+# nos conjuntos f_spi e f_spb (esta diferença surgiu quando aplicamos filtros 
+# na construção das listas por estabelecimento).
+f_simoldes |> glimpse()
+f_spi |> glimpse()
+f_spb |> glimpse()
+
+# As peças que não aparecem em f-spi e f-spb ou não possuem código do cliente
+# ou são de clientes que não atendemos mais (ex.: Nissan)
+f_simoldes |> anti_join(f_estab, join_by(item)) |> View()
+
+# Assim, vamos seguir com f_estab
+f_estab <- rbind(f_spi, f_spb)
+f_estab |> write_rds("f-estab.rds")
+f_estab <- read_rds("f-estab.rds")
+
+f_estab <- 
+  f_estab |> 
+  left_join(precos, join_by(item == numero_artigo))
 ```
 
 ## Ler estruturas de BoM e BoP
@@ -276,7 +554,8 @@ bop |> glimpse()
 
 ## Alguns itens não possuem BOM registrada!
 ## Pendente decidir o que fazer com estes!
-p_importar |> 
+itens_sem_bom <- 
+  f_estab |> 
   anti_join(bom, join_by(item == material_number)) |> 
   View()
 

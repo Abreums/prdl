@@ -4,51 +4,88 @@
 #
 # caso seja item F copia o código do cliente no campo customers_part_no
 
+read_itens_summary <- function(filename_itens = "default") {
+
+  if(filename_itens == "default") {
+    #filename_itens <- here("data", "Artigos 2025-07-08.xlsx")
+    # filename_itens <- here("data", "Artigos 2025-09-02.xlsx")
+    filename_itens <- here("data", "Artigos 2025-10-21.xlsx")
+  }
+
+  itens <-
+    readxl::read_excel(filename_itens) |>
+    janitor::clean_names()
+
+  itens <-
+    itens |>
+    mutate(estabelecimento = ifelse(empresa == "SPB", "103", "102")) |>
+    mutate(tebez1 = ifelse(is.na(tebez1), " ", stringr::str_squish(tebez1)),
+           tebez2 = ifelse(is.na(tebez2), " ", stringr::str_squish(tebez2)),
+           desc = stringr::str_c(tebez1, " ", tebez2) |> stringr::str_squish(),
+           desc2 = stringr::str_squish(tebez2)) |>
+    mutate(un = case_when(
+      unit_measure == "PCs" ~   "PC",
+      unit_measure == "Unit" ~   "UN",
+      TRUE ~ unit_measure)) |>
+    mutate(
+      grupo_estoque = case_when(
+        tipo_de_materiais == "Raw materials" ~ "30",
+        tipo_de_materiais == "Packaging" ~ "40",
+        tipo_de_materiais == "Returnable packaging" ~ "70",
+        tipo_de_materiais == "Semifinished Product" ~ "20",
+        tipo_de_materiais == "Finished Product" ~  "10",
+        tipo_de_materiais == "Services" ~ "90",
+        TRUE ~ "99")) |>
+    select(item = tetenr,
+           estabelecimento = empresa,
+           grupo_de_estoque = tipo_de_materiais,
+           desc,
+           desc2,
+           un,
+           prj_sigla = teprgr,
+           prj_desc = fstext,
+           cod_comp = tezinr,
+           ncm = utclsf,
+           xp_temagr = temagr,
+           xp_mat_group_desc = mat_group_desc,
+           xp_tematc = tematc,
+           xp_teprgr = teprgr,
+           xp_fstext = fstext)
+
+}
+
 read_itens <- function(filename_itens = "default") {
 
-    if(filename_itens == "default") {
-      #filename_itens <- here("data", "Artigos 2025-07-08.xlsx")
-      filename_itens <- here("data", "Artigos 2025-09-02.xlsx")
-    }
+  if(filename_itens == "default") {
+    #filename_itens <- here("data", "Artigos 2025-07-08.xlsx")
+    # filename_itens <- here("data", "Artigos 2025-09-02.xlsx")
+    filename_itens <- here("data", "Artigos 2025-10-21.xlsx")
+  }
 
-    itens <-
-      readxl::read_excel(filename_itens) |>
-      janitor::clean_names()
+  itens <-
+    readxl::read_excel(filename_itens) |>
+    janitor::clean_names()
 
-    itens <-
-      itens |>
-      mutate(estabelecimento = ifelse(empresa == "SPB", "103", "102")) |>
-      mutate(tebez1 = ifelse(is.na(tebez1), " ", stringr::str_squish(tebez1)),
-             tebez2 = ifelse(is.na(tebez2), " ", stringr::str_squish(tebez2)),
-             desc = stringr::str_c(tebez1, " ", tebez2) |> stringr::str_squish(),
-             desc2 = stringr::str_squish(tebez2)) |>
-      mutate(un = case_when(
-        unit_measure == "PCs" ~   "PC",
-        unit_measure == "Unit" ~   "UN",
-        TRUE ~ unit_measure)) |>
-      mutate(
-        grupo_estoque = case_when(
-          tipo_de_materiais == "Raw materials" ~ "30",
-          tipo_de_materiais == "Packaging" ~ "40",
-          tipo_de_materiais == "Returnable packaging" ~ "70",
-          tipo_de_materiais == "Semifinished Product" ~ "20",
-          tipo_de_materiais == "Finished Product" ~  "10",
-          tipo_de_materiais == "Services" ~ "90",
-          TRUE ~ "99")) |>
-      select(item = tetenr,
-             estabelecimento = empresa,
-             grupo_de_estoque = tipo_de_materiais,
-             desc,
-             desc2,
-             un,
-             prj_sigla = teprgr,
-             prj_desc = fstext,
-             cod_comp = tezinr,
-             xp_temagr = temagr,
-             xp_mat_group_desc = mat_group_desc,
-             xp_tematc = tematc,
-             xp_teprgr = teprgr,
-             xp_fstext = fstext)
+  itens <-
+    itens |>
+    mutate(estabelecimento = ifelse(empresa == "SPB", "103", "102")) |>
+    mutate(tebez1 = ifelse(is.na(tebez1), " ", stringr::str_squish(tebez1)),
+           tebez2 = ifelse(is.na(tebez2), " ", stringr::str_squish(tebez2)),
+           desc = stringr::str_c(tebez1, " ", tebez2) |> stringr::str_squish(),
+           desc2 = stringr::str_squish(tebez2)) |>
+    mutate(un = case_when(
+      unit_measure == "PCs" ~   "PC",
+      unit_measure == "Unit" ~   "UN",
+      TRUE ~ unit_measure)) |>
+    mutate(
+      grupo_estoque = case_when(
+        tipo_de_materiais == "Raw materials" ~ "30",
+        tipo_de_materiais == "Packaging" ~ "40",
+        tipo_de_materiais == "Returnable packaging" ~ "70",
+        tipo_de_materiais == "Semifinished Product" ~ "20",
+        tipo_de_materiais == "Finished Product" ~  "10",
+        tipo_de_materiais == "Services" ~ "90",
+        TRUE ~ "99"))
 
 }
 
