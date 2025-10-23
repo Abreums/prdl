@@ -9,8 +9,8 @@
 # use:
 # get_itens_of_bom(a_specific_bom, system_item) para obter uma lista das materias primas da bom
 
-read_bom <- function(bom_file = "BOM 2025-09-02.xlsx") {
-  bom <- readxl::read_excel(here::here("data", bom_file)) |>
+read_bom <- function(bom_file = here::here("data", "BOM 2025-09-02.xlsx")) {
+  bom <- readxl::read_excel(bom_file) |>
     janitor::clean_names()
 }
 
@@ -61,60 +61,37 @@ get_bom_from_id <- function(id, bom) {
 }
 
 
-get_itens_of_bom <- function(bom, itens) {
-  # bom <- f3040
-
-  main_finish_product <-
-    bom |>
-    filter(str_detect(material_number, "^F")) |>
-    distinct(material_number, plant)
-  main_finish_product_plant <-
-    main_finish_product |> pull(plant)
-  estabelecimento <-
-    ifelse(main_finish_product_plant == "SPI", 102, ifelse(main_finish_product_plant == "SPB", 103, NA))
-
+get_itens_from_bom <- function(bom) {
   bom_components <-
-    bom |> pull(bom_component)
-
-  bom_itens <-
-    itens |>
-    filter(item %in% bom_components) |>
-    select(item,
-           desc,
-           grupo_de_estoque,
-           un,
-           estabelecimento)
+    bom |>
+    distinct(bom_component)
 }
 
-get_mp_from_bom <- function(bom, itens) {
-  bom_components <-
-    bom |> pull(bom_component)
+get_semi_from_bom <- function(bom) {
+  semi <-
+    bom |>
+    distinct(bom_component) |>
+    filter(str_detect(bom_component, "^I") | str_detect(bom_component, "^F"))
 
-  bom_itens <-
-    itens |>
-    filter(item %in% bom_components) |>
-    mutate(fam_com = "") |>
-    select(item,
-           desc,
-           grupo_de_estoque,
-           fam_com,
-           un,
-           estabelecimento,
-           cod_comp) |>
-    filter(!str_detect(item, "^I")) |>
-    filter(!str_detect(item, "^F")) |>
-    filter(!str_detect(item, "^E1")) |>
-    filter(!str_detect(item, "^E2")) |>
-    filter(!str_detect(item, "^R1")) |>
-    filter(!str_detect(item, "^V1")) |>
-    group_by(item) |>
-    summarise(desc = first(desc),
-              grupo_de_estoque = first(grupo_de_estoque),
-              un = first(un),
-              estabelecimento = first(estabelecimento),
-              fam_com = first(fam_com),
-              cod_comp = first(cod_comp)) |>
-    mutate(cod_comp = ifelse(is.na(cod_comp), " ", cod_comp))
+  if (nrow(semi) == 0) {
+    return(NA)
+  } else {
+    return(semi)
+  }
+}
+
+get_mp_from_bom <- function(bom) {
+  mp <-
+    bom |>
+    distinct(bom_component) |>
+    filter(!str_detect(bom_component, "^I")) |>
+    filter(!str_detect(bom_component, "^F"))
+
+  if(nrow(mp) == 0) {
+      return(NA)
+    } else {
+      return(mp)
+    }
 }
 
 build_bom <- function(component, bom) {

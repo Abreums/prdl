@@ -120,24 +120,24 @@ get_finished_itens <- function(itens) {
 
 
 set_item_family <- function(df_item) {
-  # df_item <- to_imp_itens
+
   item_w_family <-
     df_item |>
-    mutate(mat_group_desc = str_squish(mat_group_desc)) |>
+    mutate(xp_mat_group_desc = str_squish(xp_mat_group_desc)) |>
     mutate(grupo_estoque = case_when(
-      str_detect(tipo_de_materiais, "Raw materials") ~ "30",
-      str_detect(tipo_de_materiais, "Semifinished Product") ~ "20",
-      str_detect(tipo_de_materiais, "Packaging") ~ "40",
-      str_detect(tipo_de_materiais, "Returnable packaging") ~ "70",
-      str_detect(tipo_de_materiais, "Operating supplies") ~ "60",
-      str_detect(tipo_de_materiais, "Services") ~ "30",
-      str_detect(tipo_de_materiais, "Finished Products") ~ "10",
-    str_detect(tipo_de_materiais, "Product resource/tools") ~ "50",
-      str_detect(tipo_de_materiais, "Services") ~ "99",
-      str_detect(tipo_de_materiais, "SNon-Stock Material") ~ "99",
+      str_detect(grupo_de_estoque, "Raw materials") ~ "30",
+      str_detect(grupo_de_estoque, "Semifinished Product") ~ "20",
+      str_detect(grupo_de_estoque, "Packaging") ~ "40",
+      str_detect(grupo_de_estoque, "Returnable packaging") ~ "70",
+      str_detect(grupo_de_estoque, "Operating supplies") ~ "60",
+      str_detect(grupo_de_estoque, "Services") ~ "30",
+      str_detect(grupo_de_estoque, "Finished Products") ~ "10",
+      str_detect(grupo_de_estoque, "Product resource/tools") ~ "50",
+      str_detect(grupo_de_estoque, "Services") ~ "99",
+      str_detect(grupo_de_estoque, "SNon-Stock Material") ~ "99",
       TRUE ~ "99"
     )) |>
-    mutate(fam_m = str_sub(tetenr, start = 1L, end = 2L)) |>
+    mutate(fam_m = str_sub(item, start = 1L, end = 2L)) |>
     mutate(             # ATENÇÃO! A ORDEM ABAIXO IMPORTA !
       family = case_when(
         # str_detect(desc, "^PR FILM PLAS") ~ "44003",
@@ -426,296 +426,296 @@ set_item_family <- function(df_item) {
         # TRUE ~   "9999999"
         str_detect(desc, "^PR FILM PLAS") ~ "003",
 
-        str_detect(mat_group_desc, "MASTER ABS-PC")   ~   "002",
-        str_detect(mat_group_desc, "MASTER ABS")   ~   "001",
-        str_detect(mat_group_desc, "MASTER PP")   ~   "003",
-        str_detect(mat_group_desc, "MASTER PA6")   ~   "004",
-        str_detect(mat_group_desc, "MASTER TPE")   ~   "005",
+        str_detect(xp_mat_group_desc, "MASTER ABS-PC")   ~   "002",
+        str_detect(xp_mat_group_desc, "MASTER ABS")   ~   "001",
+        str_detect(xp_mat_group_desc, "MASTER PP")   ~   "003",
+        str_detect(xp_mat_group_desc, "MASTER PA6")   ~   "004",
+        str_detect(xp_mat_group_desc, "MASTER TPE")   ~   "005",
 
-        str_detect(mat_group_desc, "PP COPO REC")   ~   "999",
-        str_detect(mat_group_desc, "PP COPO") ~   "002",
-        str_detect(mat_group_desc, "PP T I")   ~   "006",
-        str_detect(mat_group_desc, "PP T")    ~   "001",
-        str_detect(mat_group_desc, "PP I")   ~   "007",
-        str_detect(mat_group_desc, "PP GF")   ~   "003",
-        str_detect(mat_group_desc, "PP HC")   ~   "004",
-        str_detect(mat_group_desc, "PP LGF")   ~   "005",
-        str_detect(mat_group_desc, "^PP")    ~   "000",
+        str_detect(xp_mat_group_desc, "PP COPO REC")   ~   "999",
+        str_detect(xp_mat_group_desc, "PP COPO") ~   "002",
+        str_detect(xp_mat_group_desc, "PP T I")   ~   "006",
+        str_detect(xp_mat_group_desc, "PP T")    ~   "001",
+        str_detect(xp_mat_group_desc, "PP I")   ~   "007",
+        str_detect(xp_mat_group_desc, "PP GF")   ~   "003",
+        str_detect(xp_mat_group_desc, "PP HC")   ~   "004",
+        str_detect(xp_mat_group_desc, "PP LGF")   ~   "005",
+        str_detect(xp_mat_group_desc, "^PP")    ~   "000",
 
-        str_detect(mat_group_desc, "ABS REC")   ~   "999",
-        str_detect(mat_group_desc, "ABS-PC")   ~   "001",
-        str_detect(mat_group_desc, "ABS")   ~   "000",
+        str_detect(xp_mat_group_desc, "ABS REC")   ~   "999",
+        str_detect(xp_mat_group_desc, "ABS-PC")   ~   "001",
+        str_detect(xp_mat_group_desc, "ABS")   ~   "000",
 
-        str_detect(mat_group_desc, "PA6 GF")   ~   "003",
-        str_detect(mat_group_desc, "PA6.6 T")   ~   "002",
-        str_detect(mat_group_desc, "PA6")   ~   "001",
-        str_detect(mat_group_desc, "ASA")   ~   "000",
+        str_detect(xp_mat_group_desc, "PA6 GF")   ~   "003",
+        str_detect(xp_mat_group_desc, "PA6.6 T")   ~   "002",
+        str_detect(xp_mat_group_desc, "PA6")   ~   "001",
+        str_detect(xp_mat_group_desc, "ASA")   ~   "000",
 
-        str_detect(mat_group_desc, "ABS-PC")   ~   "001",
-        str_detect(mat_group_desc, "PC")   ~   "000",
+        str_detect(xp_mat_group_desc, "ABS-PC")   ~   "001",
+        str_detect(xp_mat_group_desc, "PC")   ~   "000",
 
-        str_detect(mat_group_desc, "TPE")   ~   "000",
+        str_detect(xp_mat_group_desc, "TPE")   ~   "000",
         # Elastômero Termoplástico
-        str_detect(mat_group_desc, "POM")   ~   "000",
+        str_detect(xp_mat_group_desc, "POM")   ~   "000",
         # Polioximetileno
 
-        str_detect(mat_group_desc, "^METALLIC CLIPS")      ~   "001",
+        str_detect(xp_mat_group_desc, "^METALLIC CLIPS")      ~   "001",
         #METALLIC CLIPS OMEGA
-        str_detect(mat_group_desc, "METAIS")            ~   "000",
-        str_detect(mat_group_desc, "STAMPED STEEL SLEEVE") ~   "002",
+        str_detect(xp_mat_group_desc, "METAIS")            ~   "000",
+        str_detect(xp_mat_group_desc, "STAMPED STEEL SLEEVE") ~   "002",
         # MANGA DE AÇO ESTAMPADO
-        str_detect(mat_group_desc, "TORSION SPRING")       ~   "003",
+        str_detect(xp_mat_group_desc, "TORSION SPRING")       ~   "003",
         # mola de torçao
-        str_detect(mat_group_desc, "CASTING COMPONENTS")   ~   "004",
+        str_detect(xp_mat_group_desc, "CASTING COMPONENTS")   ~   "004",
         # componentes de fundição
-        str_detect(mat_group_desc, "SELF-TAPPING SCREW P") ~   "005",
+        str_detect(xp_mat_group_desc, "SELF-TAPPING SCREW P") ~   "005",
         # parafuso auto rosca
-        str_detect(mat_group_desc, "METALLIC RIVETS")      ~   "006",
+        str_detect(xp_mat_group_desc, "METALLIC RIVETS")      ~   "006",
         # rebites metálicos
-        str_detect(mat_group_desc, "TRACTION SPRING")      ~   "007",
+        str_detect(xp_mat_group_desc, "TRACTION SPRING")      ~   "007",
         # mola de tração
-        str_detect(mat_group_desc, "OTHER METAL FASTENER") ~   "008",
+        str_detect(xp_mat_group_desc, "OTHER METAL FASTENER") ~   "008",
         # OUTROS FIXADORES DE METAL
-        str_detect(mat_group_desc, "EXTRUDED PROFILES")    ~   "009",
+        str_detect(xp_mat_group_desc, "EXTRUDED PROFILES")    ~   "009",
         # PERFIS EXTRUDADOS
-        str_detect(mat_group_desc, "M DOUB. TWEEZER CLIP") ~   "010",
+        str_detect(xp_mat_group_desc, "M DOUB. TWEEZER CLIP") ~   "010",
         # PINÇA DUPLA
-        str_detect(mat_group_desc, "METAL CLIP W/MET NUT") ~   "011",
+        str_detect(xp_mat_group_desc, "METAL CLIP W/MET NUT") ~   "011",
         # CLIP DE METAL COM PORCA DE METAL
-        str_detect(mat_group_desc, "METAL CLIP W/PLT NUT") ~   "012",
+        str_detect(xp_mat_group_desc, "METAL CLIP W/PLT NUT") ~   "012",
         # METAL CLIP W/PLT NUT
-        str_detect(mat_group_desc, "NUTS TO RIVET")        ~   "013",
+        str_detect(xp_mat_group_desc, "NUTS TO RIVET")        ~   "013",
         # PORCAS PARA REBITE
-        str_detect(mat_group_desc, "STEEL TUBE")           ~   "014",
+        str_detect(xp_mat_group_desc, "STEEL TUBE")           ~   "014",
         # TUBO DE AÇO
-        str_detect(mat_group_desc, "TURNED INSERTS STEEL") ~   "015",
+        str_detect(xp_mat_group_desc, "TURNED INSERTS STEEL") ~   "015",
         # TORNEADOS DE AÇO
-        str_detect(mat_group_desc, "BRASS TUBE")           ~   "016",
+        str_detect(xp_mat_group_desc, "BRASS TUBE")           ~   "016",
         # TUBO DE LATÃO
-        str_detect(mat_group_desc, "METALLIC METRICSCREW") ~   "017",
+        str_detect(xp_mat_group_desc, "METALLIC METRICSCREW") ~   "017",
         # PARAFUSO MÉTRICO METÁLICO
-        str_detect(mat_group_desc, "METRIC NUTS")          ~   "018",
+        str_detect(xp_mat_group_desc, "METRIC NUTS")          ~   "018",
         # PORCAS MÉTRICAS
-        str_detect(mat_group_desc, "SELF-TAPPING SCREW M") ~   "019",
+        str_detect(xp_mat_group_desc, "SELF-TAPPING SCREW M") ~   "019",
         # PARAFUSO AUTO-ROSCA Metálico
-        str_detect(mat_group_desc, "SPRING WASHERS")        ~   "020",
+        str_detect(xp_mat_group_desc, "SPRING WASHERS")        ~   "020",
         # ARRUELAS DE MOLA
-        str_detect(mat_group_desc, "STEEL REINFORCEMENTS") ~   "021",
+        str_detect(xp_mat_group_desc, "STEEL REINFORCEMENTS") ~   "021",
         # REFORÇOS DE AÇO
-        str_detect(mat_group_desc, "METAL TWEEZERS CLIP")  ~   "022",
+        str_detect(xp_mat_group_desc, "METAL TWEEZERS CLIP")  ~   "022",
         # PARAFUSO MÉTRICO METÁLICO
-        str_detect(mat_group_desc, "OTHER STAMPED METAL")  ~   "022",
+        str_detect(xp_mat_group_desc, "OTHER STAMPED METAL")  ~   "022",
         # OUTROS METAIS ESTAMPADOS
-        str_detect(mat_group_desc, "OTHER NUTS")           ~   "022",
+        str_detect(xp_mat_group_desc, "OTHER NUTS")           ~   "022",
         # OUTRAS PORCAS METÁLICAS
-        str_detect(mat_group_desc, "OTHER SCREWS")         ~   "023",
+        str_detect(xp_mat_group_desc, "OTHER SCREWS")         ~   "023",
         # OUTRAS PARAFUSOS METÁLICOS
-        str_detect(mat_group_desc, "OTHER WASHERS")        ~   "024",
+        str_detect(xp_mat_group_desc, "OTHER WASHERS")        ~   "024",
         # OUTRAS ARRUELAS METÁLICAS
-        str_detect(mat_group_desc, "OTHERS SPRINGS")       ~   "025",
+        str_detect(xp_mat_group_desc, "OTHERS SPRINGS")       ~   "025",
         # OUTRAS MOLAS METÁLICAS
-        str_detect(mat_group_desc, "M DOUB. TWEEZER CLIP") ~   "026",
+        str_detect(xp_mat_group_desc, "M DOUB. TWEEZER CLIP") ~   "026",
         # PINÇA DUPLA METÁLICA
 
 
-        str_detect(mat_group_desc, "PLASTIC CLIPS")  ~   "001",
+        str_detect(xp_mat_group_desc, "PLASTIC CLIPS")  ~   "001",
         # CLIPS DE PLÁSTICO REDONDOS
-        str_detect(mat_group_desc, "PLASTICS")             ~   "000",
-        str_detect(mat_group_desc, "OTHER PLASTIC FAST.")  ~   "002",
+        str_detect(xp_mat_group_desc, "PLASTICS")             ~   "000",
+        str_detect(xp_mat_group_desc, "OTHER PLASTIC FAST.")  ~   "002",
         # FIXADOR DE PLÁSTICO
 
-        str_detect(mat_group_desc, "IN MOULD LABELING")    ~   "002",
+        str_detect(xp_mat_group_desc, "IN MOULD LABELING")    ~   "002",
         # ETIQUETAGEM DE MOLDATEM
-        str_detect(mat_group_desc, "HOT STAMPING FILMS")   ~   "003",
+        str_detect(xp_mat_group_desc, "HOT STAMPING FILMS")   ~   "003",
         # FILMES DE ESTAMPAGEM A QUENTE
 
-        str_detect(mat_group_desc, "PVC CUTTED")   ~   "001",
+        str_detect(xp_mat_group_desc, "PVC CUTTED")   ~   "001",
         # PVC CORTADO
-        str_detect(mat_group_desc, "PVC IN ROLL")   ~   "002",
+        str_detect(xp_mat_group_desc, "PVC IN ROLL")   ~   "002",
         #
-        str_detect(mat_group_desc, "PVC")   ~   "000",
+        str_detect(xp_mat_group_desc, "PVC")   ~   "000",
         # PVC
 
-        str_detect(mat_group_desc, "PES FABRIC W/FOAM CT")   ~   "102",
+        str_detect(xp_mat_group_desc, "PES FABRIC W/FOAM CT")   ~   "102",
         #
-        str_detect(mat_group_desc, "PES FABRIC IN ROLL")     ~   "103",
+        str_detect(xp_mat_group_desc, "PES FABRIC IN ROLL")     ~   "103",
         #
-        str_detect(mat_group_desc, "PES FABRIC IN ROLL")     ~   "104",
+        str_detect(xp_mat_group_desc, "PES FABRIC IN ROLL")     ~   "104",
         #
-        str_detect(mat_group_desc, "PES FABRIC W/FOAM RL")   ~   "105",
+        str_detect(xp_mat_group_desc, "PES FABRIC W/FOAM RL")   ~   "105",
         #
-        str_detect(mat_group_desc, "PES FABRIC W/NW ROLL")   ~   "106",
+        str_detect(xp_mat_group_desc, "PES FABRIC W/NW ROLL")   ~   "106",
         #
-        str_detect(mat_group_desc, "^PES FAB")   ~   "101",
+        str_detect(xp_mat_group_desc, "^PES FAB")   ~   "101",
         #
-        str_detect(mat_group_desc, "OTHER ELASTIC TEXT.")    ~   "107",
+        str_detect(xp_mat_group_desc, "OTHER ELASTIC TEXT.")    ~   "107",
         #
-        str_detect(mat_group_desc, "TEXTILE NETS")           ~   "201",
+        str_detect(xp_mat_group_desc, "TEXTILE NETS")           ~   "201",
         #
-        str_detect(mat_group_desc, "TPO CUTTED")             ~   "202",
+        str_detect(xp_mat_group_desc, "TPO CUTTED")             ~   "202",
         #
-        str_detect(mat_group_desc, "NW FB W/ ADHES CUT")     ~   "203",
+        str_detect(xp_mat_group_desc, "NW FB W/ ADHES CUT")     ~   "203",
         #
-        str_detect(mat_group_desc, "TPO IN ROLL")            ~   "204",
-        #
-
-        str_detect(mat_group_desc, "ESPUMA")                 ~   "000",
-        #
-        str_detect(mat_group_desc, "EPDM FOAM OPEN CELL")    ~   "001",
-        #
-        str_detect(mat_group_desc, "AGGLOMERATE PUR FOAM")   ~   "002",
-        #
-        str_detect(mat_group_desc, "PVC FOAM")               ~   "003",
-        #
-        str_detect(mat_group_desc, "PE FOAM OPEN CELL")      ~   "004",
-        #
-        str_detect(mat_group_desc, "PUR FOAMS")              ~   "005",
-        #
-        str_detect(mat_group_desc, "PE FOAM CLOSED CELL")    ~   "006",
-        #
-        str_detect(mat_group_desc, "PUR GLUE POLYOL")    ~   "101",
+        str_detect(xp_mat_group_desc, "TPO IN ROLL")            ~   "204",
         #
 
-        str_detect(mat_group_desc, "POLIESTER")   ~   "100",
+        str_detect(xp_mat_group_desc, "ESPUMA")                 ~   "000",
         #
-        str_detect(mat_group_desc, "PES SOUNDP. W/T ADH.")   ~   "102",
+        str_detect(xp_mat_group_desc, "EPDM FOAM OPEN CELL")    ~   "001",
         #
-        str_detect(mat_group_desc, "PES SOUNDP. W/ ADH.")   ~   "101",
+        str_detect(xp_mat_group_desc, "AGGLOMERATE PUR FOAM")   ~   "002",
         #
-
-        str_detect(mat_group_desc, "FELT FB W/T ADHESIVE")   ~   "202",
+        str_detect(xp_mat_group_desc, "PVC FOAM")               ~   "003",
         #
-        str_detect(mat_group_desc, "FELT FB W/ ADHESIVE")   ~   "201",
+        str_detect(xp_mat_group_desc, "PE FOAM OPEN CELL")      ~   "004",
         #
-        str_detect(mat_group_desc, "FELTRO")   ~   "200",
+        str_detect(xp_mat_group_desc, "PUR FOAMS")              ~   "005",
         #
-        str_detect(mat_group_desc, "OTHER FELT W/T ADHES")   ~   "207",
+        str_detect(xp_mat_group_desc, "PE FOAM CLOSED CELL")    ~   "006",
         #
-        str_detect(mat_group_desc, "SYNTH. FELT W/T ADH.")   ~   "207",
-        #
-        str_detect(mat_group_desc, "FELT FB W/ ADHESIVE")   ~   "208",
-
-        str_detect(mat_group_desc, "SYNTH. FELT W ADHES.")   ~   "203",
-        #
-        str_detect(mat_group_desc, "OTHER FELT W/ ADHES.")   ~   "205",
-        #
-        str_detect(mat_group_desc, "BI-ADHESIVE TAPES")   ~   "206",
-        #
-        str_detect(mat_group_desc, "TAKA WITH ADHESIVE")   ~   "501",
-        #
-        str_detect(mat_group_desc, "OTHER SDP W/T ADHES.")   ~   "601",
+        str_detect(xp_mat_group_desc, "PUR GLUE POLYOL")    ~   "101",
         #
 
-        str_detect(mat_group_desc, "ELETRIFICADOS")   ~   "000",
+        str_detect(xp_mat_group_desc, "POLIESTER")   ~   "100",
         #
-        str_detect(mat_group_desc, "ELECTRICAL COMPONENT")   ~   "001",
+        str_detect(xp_mat_group_desc, "PES SOUNDP. W/T ADH.")   ~   "102",
+        #
+        str_detect(xp_mat_group_desc, "PES SOUNDP. W/ ADH.")   ~   "101",
         #
 
-        str_detect(mat_group_desc, "POLIURETANO")   ~   "000",
+        str_detect(xp_mat_group_desc, "FELT FB W/T ADHESIVE")   ~   "202",
+        #
+        str_detect(xp_mat_group_desc, "FELT FB W/ ADHESIVE")   ~   "201",
+        #
+        str_detect(xp_mat_group_desc, "FELTRO")   ~   "200",
+        #
+        str_detect(xp_mat_group_desc, "OTHER FELT W/T ADHES")   ~   "207",
+        #
+        str_detect(xp_mat_group_desc, "SYNTH. FELT W/T ADH.")   ~   "207",
+        #
+        str_detect(xp_mat_group_desc, "FELT FB W/ ADHESIVE")   ~   "208",
+
+        str_detect(xp_mat_group_desc, "SYNTH. FELT W ADHES.")   ~   "203",
+        #
+        str_detect(xp_mat_group_desc, "OTHER FELT W/ ADHES.")   ~   "205",
+        #
+        str_detect(xp_mat_group_desc, "BI-ADHESIVE TAPES")   ~   "206",
+        #
+        str_detect(xp_mat_group_desc, "TAKA WITH ADHESIVE")   ~   "501",
+        #
+        str_detect(xp_mat_group_desc, "OTHER SDP W/T ADHES.")   ~   "601",
+        #
+
+        str_detect(xp_mat_group_desc, "ELETRIFICADOS")   ~   "000",
+        #
+        str_detect(xp_mat_group_desc, "ELECTRICAL COMPONENT")   ~   "001",
+        #
+
+        str_detect(xp_mat_group_desc, "POLIURETANO")   ~   "000",
         # parte injetada de poliuretano
-        str_detect(mat_group_desc, "INJECTED PARTS-PUR")   ~   "001",
+        str_detect(xp_mat_group_desc, "INJECTED PARTS-PUR")   ~   "001",
         # parte injetada de poliuretano
-        str_detect(mat_group_desc, "PAINT INJ PARTS-PUR")   ~   "002",
+        str_detect(xp_mat_group_desc, "PAINT INJ PARTS-PUR")   ~   "002",
         #
 
-        str_detect(mat_group_desc, "RUBBER STOP PAD")      ~   "101",
+        str_detect(xp_mat_group_desc, "RUBBER STOP PAD")      ~   "101",
         # BATENTE DE BORRACHA")
-        str_detect(mat_group_desc, "RUBBER PROFILE")      ~   "102",
-        str_detect(mat_group_desc, "OTHER RUBBER COMPO.")      ~   "104",
-        str_detect(mat_group_desc, "SILICONE SHOCK PAD")      ~   "151",
+        str_detect(xp_mat_group_desc, "RUBBER PROFILE")      ~   "102",
+        str_detect(xp_mat_group_desc, "OTHER RUBBER COMPO.")      ~   "104",
+        str_detect(xp_mat_group_desc, "SILICONE SHOCK PAD")      ~   "151",
 
-        str_detect(mat_group_desc, "INJECTED PARTS-SUB")   ~   "201",
-        str_detect(mat_group_desc, "PAINT INJ PARTS-SUB")   ~   "202",
-        str_detect(mat_group_desc, "CHROMATED INJ PARTS")   ~   "203",
+        str_detect(xp_mat_group_desc, "INJECTED PARTS-SUB")   ~   "201",
+        str_detect(xp_mat_group_desc, "PAINT INJ PARTS-SUB")   ~   "202",
+        str_detect(xp_mat_group_desc, "CHROMATED INJ PARTS")   ~   "203",
 
-        str_detect(mat_group_desc, "CAIXA")   ~   "000",
-        str_detect(mat_group_desc, "BOX 2 CORG W/T KRAFT")   ~   "008",
-        str_detect(mat_group_desc, "SBOX 2CORG W/T KRAFT")   ~   "009",
-        str_detect(mat_group_desc, "SBOX 2CORG W/ KRAFT")   ~   "010",
-        str_detect(mat_group_desc, "BOX 2 CORG W/ KRAFT")   ~   "001",
-        str_detect(mat_group_desc, "BOX 1 CORG W/T KRAFT")   ~   "002",
-        str_detect(mat_group_desc, "PLASTIC BOX RIGID")   ~   "003",
-        str_detect(mat_group_desc, "CLIENT PACK REUSABLE")   ~   "004",
-        str_detect(mat_group_desc, "BOX 1 CORG W/T KRAFT")   ~   "005",
-        str_detect(mat_group_desc, "BOX 1 CORG W/ KRAFT")   ~   "006",
-        str_detect(mat_group_desc, "SBOX 1CORG W/T KRAFT")   ~   "007",
-        str_detect(mat_group_desc, "BOX 3 CORG W/T KRAFT")   ~   "011",
-        str_detect(mat_group_desc, "PLASTIC CONT RIGID")   ~   "012",
-        str_detect(mat_group_desc, "METAL CONT FOLDABLE")   ~   "013",
-        str_detect(mat_group_desc, "PACKAGING KITS")   ~   "014",
-        str_detect(mat_group_desc, "BOXES LABELS")   ~   "015",
-        str_detect(mat_group_desc, "PART RETRACT. FILM")   ~   "016",
-        str_detect(mat_group_desc, "BI-ADHESIVE TAPES")   ~   "501",
+        str_detect(xp_mat_group_desc, "CAIXA")   ~   "000",
+        str_detect(xp_mat_group_desc, "BOX 2 CORG W/T KRAFT")   ~   "008",
+        str_detect(xp_mat_group_desc, "SBOX 2CORG W/T KRAFT")   ~   "009",
+        str_detect(xp_mat_group_desc, "SBOX 2CORG W/ KRAFT")   ~   "010",
+        str_detect(xp_mat_group_desc, "BOX 2 CORG W/ KRAFT")   ~   "001",
+        str_detect(xp_mat_group_desc, "BOX 1 CORG W/T KRAFT")   ~   "002",
+        str_detect(xp_mat_group_desc, "PLASTIC BOX RIGID")   ~   "003",
+        str_detect(xp_mat_group_desc, "CLIENT PACK REUSABLE")   ~   "004",
+        str_detect(xp_mat_group_desc, "BOX 1 CORG W/T KRAFT")   ~   "005",
+        str_detect(xp_mat_group_desc, "BOX 1 CORG W/ KRAFT")   ~   "006",
+        str_detect(xp_mat_group_desc, "SBOX 1CORG W/T KRAFT")   ~   "007",
+        str_detect(xp_mat_group_desc, "BOX 3 CORG W/T KRAFT")   ~   "011",
+        str_detect(xp_mat_group_desc, "PLASTIC CONT RIGID")   ~   "012",
+        str_detect(xp_mat_group_desc, "METAL CONT FOLDABLE")   ~   "013",
+        str_detect(xp_mat_group_desc, "PACKAGING KITS")   ~   "014",
+        str_detect(xp_mat_group_desc, "BOXES LABELS")   ~   "015",
+        str_detect(xp_mat_group_desc, "PART RETRACT. FILM")   ~   "016",
+        str_detect(xp_mat_group_desc, "BI-ADHESIVE TAPES")   ~   "501",
 
-        str_detect(mat_group_desc, "CORRUGATED CARD CUT.")   ~   "101",
-        str_detect(mat_group_desc, "OTHER SEPARAT&WEDGES")   ~   "102",
-        str_detect(mat_group_desc, "PAPER WEDGE BLOCKS")   ~   "103",
-        str_detect(mat_group_desc, "OTHER SEPARAT&WEDGES")   ~   "104",
-        str_detect(mat_group_desc, "PLASTIC SEPARATORS")   ~   "105",
-        str_detect(mat_group_desc, "PAPER SEPARATORS")   ~   "106",
-        str_detect(mat_group_desc, "LABELS-PACKAGES")   ~   "201",
-        str_detect(mat_group_desc, "LABELS-PARTS")   ~   "202",
-        str_detect(mat_group_desc, "TEXTILE NETS")   ~   "301",
-        str_detect(mat_group_desc, "FOAM PE BAGS")   ~   "302",
-        str_detect(mat_group_desc, "PART RETRACT. FILM")   ~   "303",
-        str_detect(mat_group_desc, "OTHER FELT W/T ADHES")   ~   "304",
-        str_detect(mat_group_desc, "PALLET EXTENS. FILM")   ~   "305",
-        str_detect(mat_group_desc, "PLAST/CARD CONT FOLD")   ~   "306",
+        str_detect(xp_mat_group_desc, "CORRUGATED CARD CUT.")   ~   "101",
+        str_detect(xp_mat_group_desc, "OTHER SEPARAT&WEDGES")   ~   "102",
+        str_detect(xp_mat_group_desc, "PAPER WEDGE BLOCKS")   ~   "103",
+        str_detect(xp_mat_group_desc, "OTHER SEPARAT&WEDGES")   ~   "104",
+        str_detect(xp_mat_group_desc, "PLASTIC SEPARATORS")   ~   "105",
+        str_detect(xp_mat_group_desc, "PAPER SEPARATORS")   ~   "106",
+        str_detect(xp_mat_group_desc, "LABELS-PACKAGES")   ~   "201",
+        str_detect(xp_mat_group_desc, "LABELS-PARTS")   ~   "202",
+        str_detect(xp_mat_group_desc, "TEXTILE NETS")   ~   "301",
+        str_detect(xp_mat_group_desc, "FOAM PE BAGS")   ~   "302",
+        str_detect(xp_mat_group_desc, "PART RETRACT. FILM")   ~   "303",
+        str_detect(xp_mat_group_desc, "OTHER FELT W/T ADHES")   ~   "304",
+        str_detect(xp_mat_group_desc, "PALLET EXTENS. FILM")   ~   "305",
+        str_detect(xp_mat_group_desc, "PLAST/CARD CONT FOLD")   ~   "306",
 
-        str_detect(mat_group_desc, "PALETE")   ~   "000",
-        str_detect(mat_group_desc, "WOOD PALLETS")   ~   "001",
-        str_detect(mat_group_desc, "WOOD PALETTS REUSAB")   ~   "002",
-        str_detect(mat_group_desc, "WOOD PALLETS6")   ~   "003",
+        str_detect(xp_mat_group_desc, "PALETE")   ~   "000",
+        str_detect(xp_mat_group_desc, "WOOD PALLETS")   ~   "001",
+        str_detect(xp_mat_group_desc, "WOOD PALETTS REUSAB")   ~   "002",
+        str_detect(xp_mat_group_desc, "WOOD PALLETS6")   ~   "003",
 
-        str_detect(mat_group_desc, "PLASTIC PALLETS")   ~   "003",
+        str_detect(xp_mat_group_desc, "PLASTIC PALLETS")   ~   "003",
 
-        str_detect(mat_group_desc, "BLISTERS")   ~   "401",
+        str_detect(xp_mat_group_desc, "BLISTERS")   ~   "401",
         # BOLHAS
 
-        str_detect(mat_group_desc, "CAIXA METÁLICA")   ~   "500",
-        str_detect(mat_group_desc, "METAL CONT RIGID")   ~   "501",
+        str_detect(xp_mat_group_desc, "CAIXA METÁLICA")   ~   "500",
+        str_detect(xp_mat_group_desc, "METAL CONT RIGID")   ~   "501",
 
-        str_detect(mat_group_desc, "SACOLA PLÁSTICA")   ~   "000",
-        str_detect(mat_group_desc, "PLASTIC BAG LDPE")   ~   "001",
-        str_detect(mat_group_desc, "PLASTIC BAG HDPE")   ~   "002",
-        str_detect(mat_group_desc, "^BUBBLE BAGS")   ~   "003",
-        str_detect(mat_group_desc, "PLASTIC BAG LDPE REC")   ~   "004",
-        str_detect(mat_group_desc, "FOAM PE BAGS")   ~   "005",
+        str_detect(xp_mat_group_desc, "SACOLA PLÁSTICA")   ~   "000",
+        str_detect(xp_mat_group_desc, "PLASTIC BAG LDPE")   ~   "001",
+        str_detect(xp_mat_group_desc, "PLASTIC BAG HDPE")   ~   "002",
+        str_detect(xp_mat_group_desc, "^BUBBLE BAGS")   ~   "003",
+        str_detect(xp_mat_group_desc, "PLASTIC BAG LDPE REC")   ~   "004",
+        str_detect(xp_mat_group_desc, "FOAM PE BAGS")   ~   "005",
 
-        str_detect(mat_group_desc, "SOLVENTES")   ~   "000",
-        str_detect(mat_group_desc, "SOLVENT BASE HARDE.")   ~   "001",
-        str_detect(mat_group_desc, "SOLVENT SOFT PAINT")   ~   "002",
-        str_detect(mat_group_desc, "SOLVENT DECOR PAINT")   ~   "003",
-        str_detect(mat_group_desc, "SOLVENT CLEARC. SFT.")   ~   "004",
-        str_detect(mat_group_desc, "SOLVENT SCRATCH COAT")   ~   "004",
+        str_detect(xp_mat_group_desc, "SOLVENTES")   ~   "000",
+        str_detect(xp_mat_group_desc, "SOLVENT BASE HARDE.")   ~   "001",
+        str_detect(xp_mat_group_desc, "SOLVENT SOFT PAINT")   ~   "002",
+        str_detect(xp_mat_group_desc, "SOLVENT DECOR PAINT")   ~   "003",
+        str_detect(xp_mat_group_desc, "SOLVENT CLEARC. SFT.")   ~   "004",
+        str_detect(xp_mat_group_desc, "SOLVENT SCRATCH COAT")   ~   "004",
 
-        str_detect(mat_group_desc, "PRIMERS")   ~   "000",
-        str_detect(mat_group_desc, "SOLVENT ADHES. PRIM.")   ~   "101",
-        str_detect(mat_group_desc, "SOLVENT FILLING PRIM")   ~   "102",
-        str_detect(mat_group_desc, "SOLVENT ADH. PRIMER")   ~   "103",
-        str_detect(mat_group_desc, "SOLVENT EXT ADH PRIM")   ~   "104",
+        str_detect(xp_mat_group_desc, "PRIMERS")   ~   "000",
+        str_detect(xp_mat_group_desc, "SOLVENT ADHES. PRIM.")   ~   "101",
+        str_detect(xp_mat_group_desc, "SOLVENT FILLING PRIM")   ~   "102",
+        str_detect(xp_mat_group_desc, "SOLVENT ADH. PRIMER")   ~   "103",
+        str_detect(xp_mat_group_desc, "SOLVENT EXT ADH PRIM")   ~   "104",
 
-        str_detect(mat_group_desc, "^THINNER")   ~   "201",
+        str_detect(xp_mat_group_desc, "^THINNER")   ~   "201",
 
-        str_detect(mat_group_desc, "WATER BASE HARDENER")   ~   "301",
-        str_detect(mat_group_desc, "WATER SOFT PAINT")   ~   "401",
-        str_detect(mat_group_desc, "WATER DECOR PAINT")   ~   "402",
+        str_detect(xp_mat_group_desc, "WATER BASE HARDENER")   ~   "301",
+        str_detect(xp_mat_group_desc, "WATER SOFT PAINT")   ~   "401",
+        str_detect(xp_mat_group_desc, "WATER DECOR PAINT")   ~   "402",
 
-        str_detect(mat_group_desc, "CYANOACRYLATES")   ~   "000",
+        str_detect(xp_mat_group_desc, "CYANOACRYLATES")   ~   "000",
 
-        str_detect(mat_group_desc, "CONSUMABLES IT")   ~   "888",
-        str_detect(mat_group_desc, "STATIONERY OFFICE")   ~   "887",
-        str_detect(mat_group_desc, "^NON STATIONARY")   ~   "886",
-        str_detect(mat_group_desc, "TEC. DOCUMENTATION")   ~   "885",
+        str_detect(xp_mat_group_desc, "CONSUMABLES IT")   ~   "888",
+        str_detect(xp_mat_group_desc, "STATIONERY OFFICE")   ~   "887",
+        str_detect(xp_mat_group_desc, "^NON STATIONARY")   ~   "886",
+        str_detect(xp_mat_group_desc, "TEC. DOCUMENTATION")   ~   "885",
         TRUE ~   "999"
       )
     ) |>
     mutate(fam_m = ifelse(str_detect(fam_m, "12"), "11", fam_m)) |>
-    mutate(fam_m = ifelse(str_detect(fam_m, "41"), ifelse(str_detect(mat_group_desc, "PLASTIC"), "42", fam_m), fam_m)) |>
+    mutate(fam_m = ifelse(str_detect(fam_m, "41"), ifelse(str_detect(xp_mat_group_desc, "PLASTIC"), "42", fam_m), fam_m)) |>
     mutate(fam_m = ifelse(str_detect(fam_m, "18"), "13", fam_m)) |>
     mutate(fam_m = ifelse(str_detect(fam_m, "19"), ifelse(str_detect(desc, "POM"),"16", fam_m), fam_m)) |>
-    mutate(fam_m = ifelse(str_detect(fam_m, "46"), ifelse(str_detect(mat_group_desc, "RUBBER"),"49", fam_m), fam_m)) |>
-    mutate(fam_m = ifelse(str_detect(fam_m, "48"), ifelse(!str_detect(mat_group_desc, "ELECTRIC"), "49", fam_m), fam_m)) |>
+    mutate(fam_m = ifelse(str_detect(fam_m, "46"), ifelse(str_detect(xp_mat_group_desc, "RUBBER"),"49", fam_m), fam_m)) |>
+    mutate(fam_m = ifelse(str_detect(fam_m, "48"), ifelse(!str_detect(xp_mat_group_desc, "ELECTRIC"), "49", fam_m), fam_m)) |>
     mutate(fam_m = ifelse(str_detect(fam_m, "61"), "62", fam_m)) |>
     mutate(family = str_c(grupo_estoque, fam_m, family))
 }

@@ -5,6 +5,19 @@ read_bop <- function(bop_file) {
     janitor::clean_names()
 }
 
+
+get_bop_from_id <- function(id, bop) {
+
+  item_bop <-
+    bop |>
+    filter(part_number == id)
+
+  if(nrow(item_bop) == 0) {
+    return(NA)
+  }
+  return(item_bop)
+}
+
 get_bom_component <- function(material){
   material |>
     select(bom_component) |>

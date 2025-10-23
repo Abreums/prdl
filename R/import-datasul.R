@@ -28,24 +28,7 @@ mp_to_cd0209 <- function(components, out_file) {
     components |>
     left_join(ja_cadastrados, join_by("item")) |>
     mutate(trx = ifelse(is.na(trx), 1, trx)) |>
-    mutate(un = case_when(
-      str_detect(item, "^20") ~ "KG",
-      str_detect(item, "^41") ~ "PC",
-      str_detect(item, "^42") ~ "PC",
-      str_detect(item, "^48") ~ "PC",
-      str_detect(item, "^49") ~ "PC",
-      str_detect(item, "^51") ~ "UN",
-      str_detect(item, "^52") ~ "UN",
-      str_detect(item, "^53") ~ "UN",
-      str_detect(item, "^54") ~ "UN",
-      str_detect(item, "^56") ~ "UN",
-      str_detect(item, "^57") ~ "UN",
-      str_detect(item, "^58") ~ "UN",
-      str_detect(item, "^71") ~ "KG",
-      str_detect(item, "^F") ~ "PC",
-      str_detect(item, "^I") ~ "PC",
-      TRUE ~ "UN"
-    )) |>
+    mutate(un = "PC") |>
     mutate(desc = str_replace_all(desc, "[[:punct:]]", "")) |>
     mutate(desc = iconv(desc,to="ASCII//TRANSLIT")) |>
     mutate(grupo_estoque = str_sub(fam_mat, start = 1L, end = 2L))

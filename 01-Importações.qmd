@@ -673,7 +673,16 @@ semi_geral |>
   distinct(fam_mat, ncm) |> 
   View()
 
-
+semi_geral <- 
+  semi_geral |> 
+  mutate(grupo_de_estoque = "20") |> 
+  select(item, desc,
+         grupo_estoque = grupo_de_estoque,
+         fam_mat, 
+         fam_com, 
+         un, 
+         estabelecimento, 
+         cod_comp)
 
 
 source("R/import-semi.R")
