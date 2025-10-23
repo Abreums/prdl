@@ -183,6 +183,8 @@ pedidos_e_vendas <-
   filter(str_detect(item, "^F"))
 
 pedidos_e_vendas |> write_rds("data/p-importar.rds")
+
+# ESTA LINHA PARA RECUPERAÇÃO FUTURA:
 pedidos_e_vendas <- read_rds("data/p-importar.rds")
 
 pedidos_e_vendas |> write_csv2("codigos-f.csv")
@@ -195,6 +197,8 @@ f_simoldes <-
   arrange(estabelecimento, cod_comp, item, prj_sigla) |> 
   select(cod_comp, item, estabelecimento, desc, desc2,prj_sigla, prj_desc, ncm)
 f_simoldes |> write_rds("data/f-simoldes.rds")
+
+# ESTA LINHA PARA RECUPERAR OS DADOS:
 f_simoldes <- read_rds("data/f-simoldes.rds")
 
 
@@ -277,7 +281,7 @@ importar_codigos |> write.csv2("importar-codigos.csv")
 
 ```
 
-## Importar SPI 
+## Importar SPI
 
 ```{r}
 
@@ -517,18 +521,25 @@ f_simoldes |> glimpse()
 f_spi |> glimpse()
 f_spb |> glimpse()
 
+
+# Assim, vamos seguir com f_estab
+f_estab <- rbind(f_spi, f_spb)
+
 # As peças que não aparecem em f-spi e f-spb ou não possuem código do cliente
 # ou são de clientes que não atendemos mais (ex.: Nissan)
 f_simoldes |> anti_join(f_estab, join_by(item)) |> View()
 
-# Assim, vamos seguir com f_estab
-f_estab <- rbind(f_spi, f_spb)
 f_estab |> write_rds("f-estab.rds")
 f_estab <- read_rds("f-estab.rds")
 
 f_estab <- 
   f_estab |> 
   left_join(precos, join_by(item == numero_artigo))
+
+# # PARA RECUPERAR (MAIS PARA BAIXO)
+# f_estab |> write_rds("data/f-stab.rds")
+# f_estab <- read_rds("data/f-stab.rds")
+
 ```
 
 ## Ler estruturas de BoM e BoP
@@ -554,10 +565,134 @@ bop |> glimpse()
 
 ## Alguns itens não possuem BOM registrada!
 ## Pendente decidir o que fazer com estes!
-itens_sem_bom <- 
-  f_estab |> 
+f_estab |> 
   anti_join(bom, join_by(item == material_number)) |> 
   View()
+
+
+
+```
+
+Para cada item vamos identificar a BOM e BOP dele
+
+```{r}
+
+f_estab <- 
+  f_estab |> 
+  mutate(item_bom = map(item, ~ get_bom_from_id(.x, bom))) |> 
+  mutate(item_bop = map(item, ~ get_bop_from_id(.x, bop)))
+
+f_estab |> View()
+
+f_estab <- 
+  f_estab |> 
+  mutate(semiacabado = map(item_bom, ~ get_semi_from_bom(.x))) |> 
+  mutate(mp = map(item_bom, ~ get_mp_from_bom(.x)))
+
+# PARA RECUPERAR (MAIS PARA BAIXO)
+f_estab |> write_rds("data/f-stab.rds")
+f_estab <- read_rds("data/f-stab.rds")
+
+
+```
+
+Obtém a lista de intermediários e a lista de MP & Comp para cada item:
+
+### semiacabado
+
+```{r}
+
+f_estab |> View()
+
+semi_geral <- 
+  f_estab |> 
+  select(item, semiacabado)
+
+semi_geral <- 
+  semi_geral |> 
+  unnest(semiacabado) |> 
+  rename(semi = bom_component) |> 
+  distinct(item, semi)
+
+ja_cadastrados <- 
+  readxl::read_excel(here::here("data", "jah_cadastrados.xlsx")) |> 
+  janitor::clean_names() |> 
+  select(item, familia, fam_coml)
+
+semi_geral <- 
+  semi_geral |> 
+  left_join(ja_cadastrados, join_by(item))
+
+semi_geral <- 
+  semi_geral |> 
+  mutate(familia = str_replace(familia, "10", "20")) |> 
+  filter(!is.na(semi), !is.na(familia)) |> 
+  select(item = semi, fam_mat = familia, fam_com = fam_coml)
+
+semi_geral |> View()
+
+mp_geral <- 
+  f_estab |> 
+  select(mp)
+
+mp_geral <- 
+  mp_geral |> 
+  unnest(mp)
+mp_geral <- 
+  mp_geral |> 
+  distinct(bom_component)
+# Como obter as famílias de MP e Componentes?
+# Vamos utilizar a lista de itens validada pela Engenharia
+# Para os itens que não estiverem na lista, vamos complementar manualmente a lista:
+
+semi_geral <- set_item_family(semi_geral)
+# ou ... usamos a classificação da planilha
+
+```
+
+## Importar Semiacabados
+
+```{r}
+
+
+# vamos eliminar os itens duplicados com famílias diferentes.
+semi_geral <- 
+  semi_geral  |>
+  group_by(item) |> 
+  summarise(fam_mat = first(fam_mat),
+            fam_com = first(fam_com, na.rm = TRUE)) |> 
+  ungroup()
+
+semi_geral  <- 
+  semi_geral |> 
+  left_join(s_itens, join_by(item)) 
+
+# ANTES DE IMPORTAR VAMOS CRIAR AS FAMÍLIAS DE SEMIACABADOS
+# O CÓDIGO ABAIXO GERA LISTA DE FAMÍLIAS DE SEMIACABADOS PARA SEREM REGISTRADAS
+semi_geral |> 
+  distinct(fam_mat, ncm) |> 
+  View()
+
+
+
+
+source("R/import-semi.R")
+semi_to_cd0209(semi_geral, "semi_geral.lst")
+
+
+```
+
+## Importar Matéria Prima
+
+```{r}
+mp_geral <- 
+  mp_geral |> 
+  left_join(s_itens, join_by(bom_component == item)) |> 
+  rename(item = bom_component)
+
+mp_geral <- 
+  set_item_family(mp_geral)
+mp_geral |> View()
 
 ```
 
