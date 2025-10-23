@@ -631,22 +631,6 @@ semi_geral <-
 
 semi_geral |> View()
 
-mp_geral <- 
-  f_estab |> 
-  select(mp)
-
-mp_geral <- 
-  mp_geral |> 
-  unnest(mp)
-mp_geral <- 
-  mp_geral |> 
-  distinct(bom_component)
-# Como obter as famílias de MP e Componentes?
-# Vamos utilizar a lista de itens validada pela Engenharia
-# Para os itens que não estiverem na lista, vamos complementar manualmente a lista:
-
-semi_geral <- set_item_family(semi_geral)
-# ou ... usamos a classificação da planilha
 
 ```
 
@@ -694,14 +678,62 @@ semi_to_cd0209(semi_geral, "semi_geral.lst")
 ## Importar Matéria Prima
 
 ```{r}
-mp_geral <- 
-  mp_geral |> 
-  left_join(s_itens, join_by(bom_component == item)) |> 
-  rename(item = bom_component)
 
 mp_geral <- 
-  set_item_family(mp_geral)
-mp_geral |> View()
+  f_estab |> 
+  select(mp) |> 
+  unnest(mp) |> 
+  distinct(bom_component) |> 
+  rename(item = bom_component) |> 
+  left_join(s_itens |> select(item, desc), join_by(item))
+
+
+# Como obter as famílias de MP e Componentes?
+# Vamos utilizar a lista de itens validada pela Engenharia
+# Para os itens que não estiverem na lista, vamos complementar manualmente a lista:
+mp_fam_sheets <- 
+  readxl::excel_sheets(here::here("data", "2025-09-19 classif fam mp.xlsx"))
+mp_fam <- 
+  readxl::read_excel(here::here("data", "2025-09-19 classif fam mp.xlsx"),
+                                sheet = mp_fam_sheets[6]) |> 
+  janitor::clean_names() |>
+  mutate(fam_mat = as.character(familia_ds)) |> 
+  select(item, desc, fam_mat, fam_desc)
+
+# A regra da função abaixo foi utilizada para gerar a primeira versão do arquivo 
+# acima... entao... vamos manter por questões históricas, mas não recomendamos usar
+#semi_geral <- set_item_family(semi_geral)
+# ou ... usamos a classificação da planilha
+
+
+mp_geral <- 
+  mp_geral |> 
+  left_join(mp_fam, join_by(item))
+
+mp_geral <- 
+mp_geral |> 
+  select(item, fam_mat, fam_desc) |> 
+  left_join(s_itens, join_by(item))
+
+mp_geral <- 
+  mp_geral |> 
+  mutate(grupo_de_estoque = "30") |> 
+  select(item, 
+         desc,
+         grupo_estoque = grupo_de_estoque,
+         fam_mat, 
+         un, 
+         estabelecimento, 
+         cod_comp)
+mp_geral <- 
+  mp_geral |> 
+  filter(!is.na(item)) |> 
+  filter(!is.na(un)) |> 
+  mutate(un = ifelse(un == "ROLLS", "UN", un))
+
+
+source("R/import-mp.R")
+mp_to_cd0209(mp_geral, "mp_geral.lst")
 
 ```
 
