@@ -66,11 +66,46 @@ precos <-
          !str_detect(nome_local_de_descarga, "^PROJETO"),
          !str_detect(nome_local_de_descarga, "^PEDIDO FECHADO PROJETO")
          ) |> 
-  filter(preco > 1000)
+  filter(preco > 1000) |> 
+  rename(item = numero_artigo,
+         cod_comp = no_refa_cliente,
+         desc = designacao)
 
 precos  |> glimpse()
 
 
+
+
+```
+
+## Já Cadastrados
+
+```{r}
+ja_cadastrados <- 
+  readxl::read_excel(here::here("data", "2025-10-27-jah_cadastrados.xlsx"),
+                     col_types = "text") |> 
+  janitor::clean_names() 
+
+cad_precos <- 
+  ja_cadastrados |> 
+  filter(str_detect(item, "^F")) |> 
+  left_join(precos, join_by(item)) |> 
+  mutate(tabela_preco = str_sub(familia, start = 3L, end = -1)) |> 
+  select(item, tabela_preco, fam_coml, desc, cod_comp, tipo_pedido, necessidade, contrato_standard, 
+         cliente, nome_local_de_descarga, numero_do_pedido_de_fecho, preco, valido_de, valido_ate, 
+         estabelecimento = planta)
+
+cad_precos |> glimpse()
+
+cad_precos <- 
+cad_precos |> 
+  select(tabela_preco, item, desc, cod_comp, tipo_pedido, necessidade, contrato_standard, 
+         cliente, nome_local_de_descarga, numero_do_pedido_de_fecho, preco, valido_de, valido_ate,
+         estabelecimento) |> 
+  arrange(tabela_preco, numero_do_pedido_de_fecho, item, cod_comp)
+
+
+cad_precos |> write_csv2("tabelas-precos.csv")
 ```
 
 ## Finais
@@ -258,11 +293,11 @@ duplicados |> write_csv("duplicados.csv")
 itens_com_preco <-
   f_itens |>
   left_join(precos |> 
-              select(numero_artigo, cliente, nome_cliente,
+              select(item, cliente, nome_cliente,
                      preco, valido_de, valido_ate, 
                      nome_local_de_descarga, 
                      numero_do_pedido_de_fecho),
-            join_by(item == numero_artigo)) |> 
+            join_by(item)) |> 
   filter(cliente %in% c(991, 992, 1001, 1003, 1004, 1005, 1050, 1051, 1070,
                         1088, 1119, 1120, 1137, 1484, 1817, 1868, 2405, 2437,
                         2815, 2964, 2995, 3139))
@@ -275,9 +310,15 @@ importar_codigos <-
   left_join(itens_com_preco, join_by(item == item)) |> 
   mutate(cod_comp = str_trim(cod_comp, side = "both")) |> 
   mutate(cod_comp = str_replace_all(cod_comp, " ", ""))  |> 
-  select(cod_comp, item, ncm, cliente, nome_cliente, estabelecimento)
+  mutate(cod_comp = str_replace_all(cod_comp, "[[:punct:]]", "")) |> 
+  filter(!is.na(cod_comp)) |> 
+  select(cod_cliente = cod_comp, item, ncm, cliente, 
+         nome_cliente, estabelecimento)
+  
+           
 
 importar_codigos |> write.csv2("importar-codigos.csv")
+
 
 ```
 
