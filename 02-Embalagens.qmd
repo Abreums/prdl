@@ -1,0 +1,120 @@
+---
+title: "Embalagens"
+author: "Simoldes"
+format: html
+editor: visual
+---
+
+As embalagens aparecem nas BOMs com o código 58.
+
+Todo item "F" deve ter pelo menos 1 embalagem. É possível que tenha 2: caixa e palete, por exemplo.
+
+Vamos recuperar as embalagens por itens. Os itens que não tiverem 2 embalagens acrescentaremos a embalagem 56000600 I00 como embalagem principal de armazenagem e manteremos a caixa como secundária.
+
+Os Racks será embalagens únicas (de armazenagem).
+
+Requisitos:
+
+-   lista de peças F
+
+## Levantar embalagens por item
+
+```{r}
+
+source("R/embalagem.R")
+
+embalagens <- 
+  f_estab |> 
+  mutate(embalagem = map(item_bom, ~ get_embalagem(.x))) |> 
+  select(item_fonte = item, 
+         embalagem, estabelecimento, fam_mat) |> 
+  filter(!map_lgl(embalagem, ~ is_empty(.x[[1]])))
+
+embalagens <- 
+  embalagens |> 
+  unnest(embalagem) |> 
+  # filter(!str_detect(desc, "PAL")) |> 
+  mutate(estabelecimento = ifelse(estabelecimento == "SPI", "102", "103"))
+
+embalagens |> View()
+
+# Eliminar descrições duplicadas
+embalagens <- 
+  embalagens |> 
+  group_by(item, embalagem) |> 
+  summarise_all(first) |> 
+  ungroup() |> 
+  mutate(nbase = case_when(
+    base_quantidade == "1" ~ 1,
+    base_quantidade == "2" ~ 10,
+    base_quantidade == "3" ~ 100,
+    base_quantidade == "4" ~ 1000,
+    base_quantidade == "5" ~ 10000,
+    base_quantidade == "6" ~ 100000,
+    base_quantidade == "7" ~ 1000000,
+    base_quantidade == "8" ~ 10000000,
+    TRUE ~ NA
+  )) |> 
+  mutate(qtde = round(nbase / as.integer(qtd_carga))) 
+
+emb <- 
+  embalagens |> select(embalagem) |> 
+  left_join(ja_cadastrados |> select(item, familia), join_by(embalagem == item))
+
+emb |> View()  
+
+emb1 <- 
+  emb |> filter(n == 1) |> select(-n) |> 
+  left_join(embalagens, join_by(item))
+
+emb1 |> View()
+```
+
+## Embalagens XPert
+
+```{r}
+x_emb <- readxl::read_excel(here::here("data", "Embalagens 2025-07-02.xlsx")) |> 
+  clean_names() |> 
+  select(-empresa)
+
+embalagens <- 
+  embalagens |> 
+  left_join(x_emb, join_by(embalagem == lmtenr)) 
+
+soh_emb <- 
+  embalagens |>
+  select(-item) |> 
+  group_by(embalagem) |> 
+  summarise_all(first) |> 
+  ungroup() |> 
+  filter(!is.na(lmtrmt)) |> 
+  select(embalagem, 
+         estabelecimento, 
+         desc,
+         texto = lmtpmb, 
+         peso = lmlegw,
+         comprimento = lmlang,
+         largura = lmmabr,
+         altura = lmhoch,
+         # volume = lmvolu,
+         codigo = lmtrmt) |>
+     mutate(peso = as.numeric(peso),
+          comprimento = as.integer(comprimento),
+          altura = as.integer(altura),
+          largura = as.integer(largura))
+
+soh_emb |> write_csv2("embalagens.csv")
+
+
+item_emb <- 
+  embalagens |> 
+  select(item, embalagem, estabelecimento, qtd_carga, base_quantidade) |> 
+  mutate(pecas_por_embalagem = ceiling(10^(as.integer(base_quantidade) - 1) / as.integer(qtd_carga)))
+  
+item_emb <- 
+item_emb |> distinct(item, embalagem, estabelecimento, pecas_por_embalagem)
+
+item_emb |> write_csv2("item-embalagem.csv")
+
+
+```

@@ -57,7 +57,7 @@ cc_file <- here("data", "Contratos de Compra 2025-10-07.xlsx")
 
 cc <- readxl::read_excel(path = cc_file) |> 
   janitor::clean_names() |> 
-  select(item = botenr,
+  rename(item = botenr,
          estabelecimento = bofirm,
          fo_id = bolinr,
          preco = bop001,
@@ -120,5 +120,41 @@ mp <-
             fam_com = first(fam_com),
             cod_comp = first(cod_comp))
 
+
+```
+
+## Itens cadastrados
+
+```{r}
+
+ja_cadastrados <- 
+  readxl::read_excel(here::here("data", "2025-10-27-jah_cadastrados.xlsx"),
+                     col_types = "text") |> 
+  janitor::clean_names() |> 
+  select(item)
+
+
+ja_cadastrados <- 
+  ja_cadastrados |> 
+  filter(!str_detect(item, "^F")) |> 
+  filter(!str_detect(item, "^I"))
+
+itens_com_contratos <- 
+  ja_cadastrados |> 
+  left_join(cc, join_by(item))
+
+
+fornecedores_para_cadastrar <- 
+  itens_com_contratos |> 
+  filter(!is.na(estabelecimento))  |> 
+  left_join(fo, join_by(fo_id)) |> 
+  distinct(fo_id)
+
+fornecedores_para_cadastrar |> 
+  left_join(fo, join_by(fo_id)) |> 
+  mutate(fo_id = str_sub(fo_id, start = 5, end = -1)) |> 
+  group_by(fo_id) |> 
+  summarise_all(first) |> 
+  write_csv2("fornecedores.csv")
 
 ```

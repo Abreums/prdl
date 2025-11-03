@@ -106,6 +106,9 @@ cad_precos |>
 
 
 cad_precos |> write_csv2("tabelas-precos.csv")
+
+
+
 ```
 
 ## Finais
@@ -782,8 +785,13 @@ mp_to_cd0209(mp_geral, "mp_geral.lst")
 
 ```{r}
 
+i_bom <- bom |> filter(str_detect(material_number, "^I"))
+f_bom <- bom |> filter(str_detect(material_number, "^F"))
+goto_en0113(bom, "bom.lst")
 
-x <- get_bom_from_id("F02023004001A", bom)
+x <- get_bom_from_id("F01123021005A", bom)
+
+x |> View()
 
 
 mp <-
