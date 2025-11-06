@@ -50,6 +50,18 @@ itens <- read_rds("data/itens.rds")
 
 itens |> View()
 
+
+itens |> 
+  filter(tetenr %in% c("I01716040001A", "I01123028002A", 
+                       "I01123028003A", "I01123041003A")) |> 
+  select(tetenr, teaucd) |> View()
+  pivot_longer(cols = -tetenr,
+               names_to = "col_nam",
+             values_to = "col_value") |> 
+  filter(str_detect(col_value, "P"))
+  select(where(~ str_detect(., "P"))) |> 
+  filter(col_nam == "teaucd")
+  
 ```
 
 ### Preços
@@ -607,6 +619,38 @@ bop <- rbind(bop_spi, bop_spb)
 
 bop |> glimpse()
 
+bop <- 
+  bop |> 
+  mutate(description = str_to_upper(description)) |> 
+  mutate(description = str_replace_all(description, "[[:punct:]]", "")) |>
+  mutate(description = iconv(description, to="ASCII//TRANSLIT")) |> 
+  mutate(description = case_when(
+    str_detect(description, "ONTAGE")      ~ "MONTAGEM",
+    str_detect(description, "INJE")         ~ "INJECAO",
+    str_detect(description, "EMBALAGEM")    ~ "EMBALAGEM",
+    str_detect(description, "EITQUET")      ~ "EMBALAGEM",
+    str_detect(description, "CORTE")        ~ "TERMO",
+    str_detect(description, "MONTA")        ~ "MONTAGEM",
+    str_detect(description, "MOLDADOS")     ~ "INJECAO",
+    str_detect(description, "TRANSBORDO")   ~ "TRANSBORDO",
+    str_detect(description, "RETRABALHO")   ~ "EMBALAGEM",
+    str_detect(description, "COMPRADO")     ~ "COMPRADO",
+    str_detect(description, "INEJCAO")      ~ "INJECAO",
+    str_detect(description, "MONTAGTEM")    ~ "MONTAGEM",
+    str_detect(description, "MONATGEM")     ~ "MONTAGEM",
+    str_detect(description, "MISTURA")      ~ "MISTURA",
+    str_detect(description, "COLAGEM")      ~ "TERMO",
+    str_detect(description, "MINTURA")      ~ "PINTURA",
+    str_detect(description, "POSTO")        ~ "MONTAGEM",
+    str_detect(description, "PINTURA")      ~ "PINTURA",
+    TRUE ~ "INATIVO")) |> 
+  filter(!is.na(description), !str_detect(description, "INATIVO"))
+    
+
+# as operações padrdão deveriam ser apenas
+bop |> distinct(description)
+  
+  
 ## Alguns itens não possuem BOM registrada!
 ## Pendente decidir o que fazer com estes!
 f_estab |> 
@@ -625,6 +669,12 @@ f_estab <-
   f_estab |> 
   mutate(item_bom = map(item, ~ get_bom_from_id(.x, bom))) |> 
   mutate(item_bop = map(item, ~ get_bop_from_id(.x, bop)))
+
+f_estab <- 
+  f_estab |> 
+  mutate(num_itens = map(item_bom, ~ nrow(.[1]))) |> 
+  mutate(num_itens = unlist(num_itens
+                            ))
 
 f_estab |> View()
 
@@ -787,7 +837,27 @@ mp_to_cd0209(mp_geral, "mp_geral.lst")
 
 i_bom <- bom |> filter(str_detect(material_number, "^I"))
 f_bom <- bom |> filter(str_detect(material_number, "^F"))
+
+pseudo <- 
+  s_itens |> 
+  select(item, pseudo) |> 
+  group_by(item) |> 
+  summarise_all(first) |> 
+  ungroup()
+
+only_this <- 
+  s_itens |> 
+  distinct(item)
+  
+bom <- 
+  bom |> 
+  left_join(pseudo, join_by(material_number == item))
+
+source("R/import-bom.R")
 goto_en0113(bom, "bom.lst")
+
+
+
 
 x <- get_bom_from_id("F01123021005A", bom)
 

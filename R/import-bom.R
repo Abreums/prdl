@@ -21,16 +21,18 @@
 
 goto_en0113 <- function(df, out_file = "default.lst") {
 
-  to_exp <-
+    to_exp <-
     df |>
+    filter(!str_detect(bom_component, "^58")) |>
     mutate(
       tipo_trx = 1,
       id_pai = material_number,
       sequencia = as.integer(bom_item_number),
       id_filho = bom_component,
       revisão = "",
-      fantasma = "N",
+      fantasma = pseudo,
       fator_perda = str_remove_all(sprintf("%5s", sprintf("%.2f", 0)), "[[:punct:]]"), # 4, #   fator de perda (decimal, 2)
+      utiliza_qtde_fixa = ifelse(base_quantidade == "*", "S", "N"),
       temein = case_when(
         base_quantidade == "*" ~ 1,
         base_quantidade == "1" ~ 1,
@@ -60,8 +62,7 @@ goto_en0113 <- function(df, out_file = "default.lst") {
       tipo_sobra = 4,
       qtde_item_pai = str_remove_all(sprintf("%13s", sprintf("%.4f", 1)), "[[:punct:]]"),
       veiculo = "",
-      percentual_distribuicao_veiculo = str_remove_all(sprintf("%8s", sprintf("%.4f", 0)),"[[:punct:]]"),
-      utiliza_qtde_fixa = "N"
+      percentual_distribuicao_veiculo = str_remove_all(sprintf("%8s", sprintf("%.4f", 0)),"[[:punct:]]")
     ) |>
     select(
       tipo_trx,

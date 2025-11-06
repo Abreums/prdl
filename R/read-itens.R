@@ -36,7 +36,10 @@ read_itens_summary <- function(filename_itens = "default") {
         tipo_de_materiais == "Finished Product" ~  "10",
         tipo_de_materiais == "Services" ~ "90",
         TRUE ~ "99")) |>
+    mutate(teaucd = ifelse(is.na(teaucd), "N", teaucd),
+           pseudo = ifelse(str_detect(teaucd, "P"), "S", "N")) |>
     select(item = tetenr,
+           pseudo,
            estabelecimento = empresa,
            grupo_de_estoque = tipo_de_materiais,
            desc,
