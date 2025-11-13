@@ -50,6 +50,15 @@ itens <- read_rds("data/itens.rds")
 
 itens |> View()
 
+ja_cadastrados <- 
+  readxl::read_excel(here::here("data", "2025-11-10 ja-cadastrados.xlsx"),
+                     col_types = "text") |> 
+  janitor::clean_names()
+
+
+s_itens <- 
+  ja_cadastrados |> 
+  left_join(s_itens, join_by(item))
 
 itens |> 
   filter(tetenr %in% c("I01716040001A", "I01123028002A", 
@@ -137,107 +146,6 @@ Também vamos identificar itens com código do cliente duplicado. Por exemplo, 2
 
 # busca lista de peças acabadas que possuem estrutura de produto
 f_itens <- get_finished_itens(s_itens)
-
-# Precisamos reduzir os itens acabados apenas ao sub-grupo dos itens vigentes.
-# vamos utilizar o critério de filtro dos itens presente na Carteira de Pedido
-# dos últimos meses.
-
-source("R/carteira-pedidos.R")  
-pedidos <- get_order_history()  
-# Vamos excluir os pedidos que não são de montadoras.
-pedidos <-
-  pedidos |>
-  filter(
-    !customer %in% c(
-      "BELLS INDUSTRIA",
-      "BIOPLASTICOS",
-      "CEMAS DO BRASIL",
-      "FAURECIA",
-      "FAURECIA AUTOMOT. BRASIL",
-      "FWC GANCHEIRAS",
-      "HB - SMR LOCACAO DE",
-      "HB SMR SP 0008-73",
-      "INDUSERVICE SERVICOS",
-      "KUNST",
-      "LINKPLAS IND.PLASTIC",
-      "MADIS CONFECCOES",
-      "NEW TECH COMPANY",
-      "NILKO TECNOLOGIA LTD",
-      "OMEGA RECYCLING",
-      "PKS PLASTICOS",
-      "PLASMAPLAST",
-      "SIMOLDES ACOS BRASIL",
-      "SIMOLDES PLASTICOS",
-      "SPI",
-      "SUMMA POLIMEROS"
-    )
-  )
-pedidos |> write_rds("data/carteira-pedidos.RDS")
-pedidos <- read_rds("data/carteira-pedidos.RDS")
-
-
-#### Relatórios de Vendas
-source("R/read-vendas.R")  
-spb_vendas <- 
-  get_itens_from_branch("SPB") 
-spb_vendas <-
-  spb_vendas |>
-  mutate(filial = "SPB")
-spi_vendas <- 
-  get_itens_from_branch("SPI") 
-spi_vendas <- 
-  spi_vendas |> 
-  mutate(filial = "SPI")  
-
-vendas <- 
-  rbind(spb_vendas, spi_vendas)
-
-vendas <- 
-  vendas |> 
-  mutate(year = year(as.Date(status))) |> 
-  group_by(item) |> 
-  summarise(year = max(year))
-
-# acrescentar informações de projeto
-vendas <- 
-  vendas |> 
-  left_join(itens |> select(item, prj_sigla, prj_desc)) |>
-  group_by(item, prj_sigla, prj_desc) |> 
-  summarise(year = max(year, na.rm = TRUE)) |> 
-  filter(str_detect(item, "^F"))
-
-vendas |> write_rds("data/vendas.rds")
-vendas <- read_rds("data/vendas.rds")
-
-## Vamos juntar os dados da Carteira de Pedidos com Vendas:
-# Vamos importar todos os produtos que aparecem nos relatórios de 
-# Pedidos de Vendas 2025
-pedidos_e_vendas <- 
-  pedidos |>
-  mutate(year = year(order_date)) |> 
-  group_by(item) |> 
-  summarise(year = max(year)) |> 
-  left_join(itens |> select(item, prj_sigla, prj_desc)) |> 
-  distinct(prj_sigla, prj_desc, year, item) |> 
-  filter(str_detect(item, "^F"))
-
-# Vamos acrescentar os produtos vendidos desde 2023
-pedidos_e_vendas <-
-  pedidos_e_vendas |> 
-  rbind(vendas) |> 
-  group_by(item) |> 
-  summarise(prj_sigla = first(prj_sigla, na.rm = TRUE),
-            prj_desc = first(prj_desc, na.rm = TRUE),
-            year = max(year)) |> 
-  select(item, prj_sigla, prj_desc, year) |> 
-  filter(str_detect(item, "^F"))
-
-pedidos_e_vendas |> write_rds("data/p-importar.rds")
-
-# ESTA LINHA PARA RECUPERAÇÃO FUTURA:
-pedidos_e_vendas <- read_rds("data/p-importar.rds")
-
-pedidos_e_vendas |> write_csv2("codigos-f.csv")
 
 
 # F SIMOLDES
@@ -359,113 +267,7 @@ f_spi <-
   f_spi |> 
   left_join(s_itens |> filter(estabelecimento == "SPI")) 
 
-f_spi <- 
-  f_spi |>
-  mutate(grupo_estoque = "10") |> 
-  mutate(fam_mat = case_when(
-    str_detect(prj_sigla, "CX") ~   "10CXPLST",
-    str_detect(prj_sigla, "X70") ~  "10RNX70",
-    str_detect(prj_sigla, "X62") ~  "10RNX70",
-    str_detect(prj_sigla, "1312") ~ "10RN1312",
-    str_detect(prj_sigla, "VIVA") ~ "10GMVIVA",
-    str_detect(prj_sigla, "V230") ~ "10VWGOLF",
-    str_detect(prj_sigla, "UPPP") ~ "10VWUP",
-    str_detect(prj_sigla, "UPC") ~  "10VWUP",
-    str_detect(prj_sigla, "UP") ~   "10VWUP",
-    str_detect(prj_sigla, "U79P") ~ "10RNU79",
-    str_detect(prj_sigla, "SCXD") ~ "10PCSC",
-    str_detect(prj_sigla, "SCDI") ~ "10PCSC",
-    str_detect(prj_sigla, "PM7") ~  "10GMPM7",
-    str_detect(prj_sigla, "PA") ~   "10XXPA",
-    str_detect(prj_sigla, "P426") ~ "10VV426",
-    str_detect(prj_sigla, "OTH") ~  "10OUTROS",
-    str_detect(prj_sigla, "NTC") ~  "10MBNTC",
-    str_detect(prj_sigla, "NCG") ~  "10SCNCG",
-    str_detect(prj_sigla, "MQBF") ~ "10VWMQB",
-    str_detect(prj_sigla, "MQB") ~  "10VWMQB",
-    str_detect(prj_sigla, "LTC") ~  "10MBLTC",
-    str_detect(prj_sigla, "L98") ~  "10XXL98",
-    str_detect(prj_sigla, "HPN") ~  "10XXHPN",
-    str_detect(prj_sigla, "HJF") ~  "10RNHJF",
-    str_detect(prj_sigla, "HJDE") ~ "10RNHJDE",
-    str_detect(prj_sigla, "HJDD") ~ "10RNHJDD",
-    str_detect(prj_sigla, "FX/J") ~ "10XXSTFX",
-    str_detect(prj_sigla, "FPN") ~  "10XXFPN",
-    str_detect(prj_sigla, "FOX") ~  "10VWFOX",
-    str_detect(prj_sigla, "F1H") ~  "10STF1H",
-    str_detect(prj_sigla, "CUVF") ~ "10VW246",
-    str_detect(prj_sigla, "CUV") ~  "10VW246",
-    str_detect(prj_sigla, "C4P") ~  "10PCC4",
-    str_detect(prj_sigla, "C4E") ~  "10PCC4",
-    str_detect(prj_sigla, "B02A") ~ "10RNB02A",
-    str_detect(prj_sigla, "AI94") ~ "10PCAI94",
-    str_detect(prj_sigla, "AI58") ~ "10PCAI58",
-    str_detect(prj_sigla, "A91") ~  "10PC208",
-    str_detect(prj_sigla, "516T") ~ "10ST516",
-    str_detect(prj_sigla, "270H") ~ "10VW270",
-    str_detect(prj_sigla, "23X") ~  "10VW23X",
-    str_detect(prj_sigla, "220P") ~ "10VW220",
-    str_detect(prj_sigla, "220C") ~ "10VW220",
-    str_detect(prj_sigla, "216T") ~ "10VW216",
-    str_detect(prj_sigla, "216C") ~ "10VW216",
-    TRUE ~ NA
-  )) |> 
-  mutate(fam_com = case_when(
-        str_detect(prj_sigla, "CX") ~ "CX",
-    str_detect(prj_sigla, "X70") ~  "RSA",
-    str_detect(prj_sigla, "X62") ~  "RSA",
-    str_detect(prj_sigla, "1312") ~ "RSA",
-    str_detect(prj_sigla, "VIVA") ~ "GMB",
-    str_detect(prj_sigla, "V230") ~ "VW",
-    str_detect(prj_sigla, "UPPP") ~ "VW",
-    str_detect(prj_sigla, "UPC") ~  "VW",
-    str_detect(prj_sigla, "UP") ~   "VW",
-    str_detect(prj_sigla, "U79P") ~ "RSA",
-    str_detect(prj_sigla, "SCXD") ~ "STEL",
-    str_detect(prj_sigla, "SCDI") ~ "STEL",
-    str_detect(prj_sigla, "PM7") ~  "GMB",
-    str_detect(prj_sigla, "PA") ~   "OUTROS",
-    str_detect(prj_sigla, "P426") ~ "VOLVO",
-    str_detect(prj_sigla, "OTH") ~  "OUTROS",
-    str_detect(prj_sigla, "NTC") ~  "MBB",
-    str_detect(prj_sigla, "NCG") ~  "SCANIA",
-    str_detect(prj_sigla, "MQBF") ~ "VW",
-    str_detect(prj_sigla, "MQB") ~  "VW",
-    str_detect(prj_sigla, "LTC") ~  "MBB",
-    str_detect(prj_sigla, "L98") ~  "OUTROS",
-    str_detect(prj_sigla, "HPN") ~  "OUTROS",
-    str_detect(prj_sigla, "HJF") ~  "RSA",
-    str_detect(prj_sigla, "HJDE") ~ "RSA",
-    str_detect(prj_sigla, "HJDD") ~ "RSA",
-    str_detect(prj_sigla, "FX/J") ~ "STEL",
-    str_detect(prj_sigla, "FPN") ~  "OUTROS",
-    str_detect(prj_sigla, "FOX") ~  "VW",
-    str_detect(prj_sigla, "F1H") ~  "STEL",
-    str_detect(prj_sigla, "CUVF") ~ "VW",
-    str_detect(prj_sigla, "CUV") ~  "VW",
-    str_detect(prj_sigla, "C4P") ~  "STEL",
-    str_detect(prj_sigla, "C4E") ~  "STEL",
-    str_detect(prj_sigla, "B02A") ~ "RSA",
-    str_detect(prj_sigla, "AI94") ~ "STEL",
-    str_detect(prj_sigla, "AI58") ~ "STEL",
-    str_detect(prj_sigla, "A91") ~  "STEL",
-    str_detect(prj_sigla, "516T") ~ "STEL",
-    str_detect(prj_sigla, "270H") ~ "VW",
-    str_detect(prj_sigla, "23X") ~  "VW",
-    str_detect(prj_sigla, "220P") ~ "VW",
-    str_detect(prj_sigla, "220C") ~ "VW",
-    str_detect(prj_sigla, "216T") ~ "VW",
-    str_detect(prj_sigla, "216C") ~ "VW",
-    TRUE ~ NA
-  )) |> 
-    select(item, 
-           desc,
-           grupo_estoque,
-           fam_mat,
-           fam_com,
-           un,
-           estabelecimento,
-           cod_comp)
+
 
 f_spi |> nrow()
 f_spi <- 
@@ -473,10 +275,6 @@ f_spi <-
   filter(!is.na(fam_mat)) |> 
   filter(!is.na(fam_com)) 
 f_spi |> nrow()
-
-source("R/import-f.R")
-f_to_cd0209(f_spi, "f_spi.lst")
-
 
 
 ```
@@ -606,46 +404,24 @@ source("R/read-bom.R")
 source("R/read-bop.R")
 
 # file_bom <- here::here("data", "BOM 2025-06-11.xlsx")
-file_bom <- here::here("data", "BOM 2025-09-02.xlsx")
+# file_bom <- here::here("data", "BOM 2025-09-02.xlsx")
+file_bom <- here::here("data", "BOM 2025-11-07.xlsx")
 bom <- read_bom(file_bom)
 
-file_bop_spi <- here::here("data", "BOP SPI 2025-07-20.xlsx")
-file_bop_spb <- here::here("data", "BOP SPB 2025-07-20.xlsx")
+#file_bop_spi <- here::here("data", "BOP SPI 2025-07-20.xlsx")
+#file_bop_spb <- here::here("data", "BOP SPB 2025-07-20.xlsx")
+
+file_bop_spi <- here::here("data", "SPI routing 2025-11-12.xlsx")
+file_bop_spb <- here::here("data", "SPB routing 2025-11-12.xlsx")
 
 bop_spi <- read_bop(file_bop_spi)
 bop_spb <- read_bop(file_bop_spb)
 
+bop_spi |> View()
+bop_spb |> View()
 bop <- rbind(bop_spi, bop_spb)
 
 bop |> glimpse()
-
-bop <- 
-  bop |> 
-  mutate(description = str_to_upper(description)) |> 
-  mutate(description = str_replace_all(description, "[[:punct:]]", "")) |>
-  mutate(description = iconv(description, to="ASCII//TRANSLIT")) |> 
-  mutate(description = case_when(
-    str_detect(description, "ONTAGE")      ~ "MONTAGEM",
-    str_detect(description, "INJE")         ~ "INJECAO",
-    str_detect(description, "EMBALAGEM")    ~ "EMBALAGEM",
-    str_detect(description, "EITQUET")      ~ "EMBALAGEM",
-    str_detect(description, "CORTE")        ~ "TERMO",
-    str_detect(description, "MONTA")        ~ "MONTAGEM",
-    str_detect(description, "MOLDADOS")     ~ "INJECAO",
-    str_detect(description, "TRANSBORDO")   ~ "TRANSBORDO",
-    str_detect(description, "RETRABALHO")   ~ "EMBALAGEM",
-    str_detect(description, "COMPRADO")     ~ "COMPRADO",
-    str_detect(description, "INEJCAO")      ~ "INJECAO",
-    str_detect(description, "MONTAGTEM")    ~ "MONTAGEM",
-    str_detect(description, "MONATGEM")     ~ "MONTAGEM",
-    str_detect(description, "MISTURA")      ~ "MISTURA",
-    str_detect(description, "COLAGEM")      ~ "TERMO",
-    str_detect(description, "MINTURA")      ~ "PINTURA",
-    str_detect(description, "POSTO")        ~ "MONTAGEM",
-    str_detect(description, "PINTURA")      ~ "PINTURA",
-    TRUE ~ "INATIVO")) |> 
-  filter(!is.na(description), !str_detect(description, "INATIVO"))
-    
 
 # as operações padrdão deveriam ser apenas
 bop |> distinct(description)
@@ -670,11 +446,11 @@ f_estab <-
   mutate(item_bom = map(item, ~ get_bom_from_id(.x, bom))) |> 
   mutate(item_bop = map(item, ~ get_bop_from_id(.x, bop)))
 
+
 f_estab <- 
   f_estab |> 
   mutate(num_itens = map(item_bom, ~ nrow(.[1]))) |> 
-  mutate(num_itens = unlist(num_itens
-                            ))
+  mutate(num_itens = unlist(num_itens))
 
 f_estab |> View()
 
@@ -848,21 +624,96 @@ pseudo <-
 only_this <- 
   s_itens |> 
   distinct(item)
-  
-bom <- 
-  bom |> 
-  left_join(pseudo, join_by(material_number == item))
+
+vw246 <- 
+  ja_cadastrados |> 
+  filter(str_detect(familia, "^VW246"))
+
+bom_vw246 <- 
+  vw246 |> 
+  select(item) |> 
+  left_join(bom, join_by(item == material_number))
 
 source("R/import-bom.R")
-goto_en0113(bom, "bom.lst")
+goto_en0113(bom_vw246, "bom_vw246.lst")
 
 
+ren216 <- 
+  f_estab |> 
+  select(item, fam_mat) |> 
+  filter(fam_mat == "^RN216") |> 
+  count(item) |> 
+  select(item)
+
+bop_246 <- 
+  vw246 |> 
+  left_join(bop, join_by(item == part_number))
+
+bop_246 <- 
+  bop_246 |> 
+  group_by(firm, item, description_1, description_2, description) |> 
+  summarise_all(first) |> 
+  ungroup()
+
+# IMPORTAR PROCESSO
 
 
-x <- get_bom_from_id("F01123021005A", bom)
+rn <- 
+  ja_cadastrados |> 
+  filter(str_detect(familia, "^RN"))
 
-x |> View()
+rn <- 
+rn |>
+  select(item) |> 
+  left_join(bop, join_by(item == part_number))
 
+rn1 <- 
+  rn |> 
+  filter(familia %in% c("RNHJF10", "RNHHA10", 
+                        "RNU7910", "RNX5210", "RNX6210"))
+
+rn2 <- 
+  rn |> 
+  filter(familia %in% c("RNX5220", "RN131210",
+                        "RN21620", "RNX6510",
+                        "RNH6110", "RNH7920"))
+
+rn3 <- 
+  rn |> 
+  filter(familia %in% c("RNH7910", "RNX6220",
+                        "RNXBB10"))
+
+bop_rn1 <- 
+  rn1 |> 
+  select(item) |> 
+  left_join(bop, join_by(item == part_number)) |> 
+  group_by(firm, item, description_1, description_2, description) |> 
+  summarise_all(first) |> 
+  ungroup() |> 
+  filter(!is.na(description))
+
+bop_rn2 <- 
+  rn2 |> 
+  select(item) |> 
+  left_join(bop, join_by(item == part_number)) |> 
+  group_by(firm, item, description_1, description_2, description) |> 
+  summarise_all(first) |> 
+  ungroup()|> 
+  filter(!is.na(description))
+
+bop_rn3 <- 
+  rn3 |> 
+  select(item) |> 
+  left_join(bop, join_by(item == part_number)) |> 
+  group_by(firm, item, description_1, description_2, description) |> 
+  summarise_all(first) |> 
+  ungroup()|> 
+  filter(!is.na(description))
+
+source("R/import-bop.R")
+goto_en0114(bop_rn1, "bop_rn1.lst")
+goto_en0114(bop_rn2, "bop_rn2.lst")
+goto_en0114(bop_rn3, "bop_rn3.lst")
 
 mp <-
   itens |>
@@ -1024,6 +875,350 @@ build_file_to_cd0209(importar, "mp.txt")
 pp |> 
   filter(str_detect(id, "1100002"))
 
+
+
+```
+
+## BOM e BOP
+
+### Renault
+
+```{r}
+rn <- 
+  ja_cadastrados |> 
+  filter(str_detect(familia, "^RN"))
+
+bom_rn <- 
+  rn |> 
+  select(item) |> 
+  left_join(bom, join_by(item == material_number))
+
+source("R/import-bom.R")
+goto_en0113(bom_rn, "bom_rn.lst")
+
+
+ren216 <- 
+  f_estab |> 
+  select(item, fam_mat) |> 
+  filter(fam_mat == "^RN216") |> 
+  count(item) |> 
+  select(item)
+
+bop_246 <- 
+  vw246 |> 
+  left_join(bop, join_by(item == part_number))
+
+bop_246 <- 
+  bop_246 |> 
+  group_by(firm, item, description_1, description_2, description) |> 
+  summarise_all(first) |> 
+  ungroup()
+
+# IMPORTAR PROCESSO
+
+
+rn <- 
+  ja_cadastrados |> 
+  filter(str_detect(familia, "^RN"))
+
+rn <- 
+rn |>
+  select(item) |> 
+  left_join(bop, join_by(item == part_number))
+
+rn1 <- 
+  rn |> 
+  filter(familia %in% c("RNHJF10", "RNHHA10", 
+                        "RNU7910", "RNX5210", "RNX6210"))
+
+rn2 <- 
+  rn |> 
+  filter(familia %in% c("RNX5220", "RN131210",
+                        "RN21620", "RNX6510",
+                        "RNH6110", "RNH7920"))
+
+rn3 <- 
+  rn |> 
+  filter(familia %in% c("RNH7910", "RNX6220",
+                        "RNXBB10"))
+
+bop_rn1 <- 
+  rn1 |> 
+  select(item) |> 
+  left_join(bop, join_by(item == part_number)) |> 
+  group_by(firm, item, description_1, description_2, description) |> 
+  summarise_all(first) |> 
+  ungroup() |> 
+  filter(!is.na(description))
+
+bop_rn2 <- 
+  rn2 |> 
+  select(item) |> 
+  left_join(bop, join_by(item == part_number)) |> 
+  group_by(firm, item, description_1, description_2, description) |> 
+  summarise_all(first) |> 
+  ungroup()|> 
+  filter(!is.na(description))
+
+bop_rn3 <- 
+  rn3 |> 
+  select(item) |> 
+  left_join(bop, join_by(item == part_number)) |> 
+  group_by(firm, item, description_1, description_2, description) |> 
+  summarise_all(first) |> 
+  ungroup()|> 
+  filter(!is.na(description))
+
+source("R/import-bop.R")
+goto_en0114(bop_rn1, "bop_rn1.lst")
+goto_en0114(bop_rn2, "bop_rn2.lst")
+goto_en0114(bop_rn3, "bop_rn3.lst")
+```
+
+### VW
+
+```{r}
+
+vw246 <-
+  ja_cadastrados |> 
+  filter(str_detect(familia, "^VW246"))
+bom_vw246 <- 
+  vw246 |> 
+  select(item) |> 
+  left_join(bom, join_by(item == material_number))
+
+bom_vw246 <- 
+  bom_vw246 |> 
+  left_join(s_itens |> distinct(item, pseudo), join_by(item))
+  
+source("R/import-bom.R")
+goto_en0113(bom_vw246, "bom_vw246.lst")
+
+
+bop_vw246 <- 
+  vw246 |> 
+  select(item) |> 
+  left_join(bop, join_by(item == part_number)) |> 
+  group_by(firm, item, description_1, description_2, description) |> 
+  summarise_all(first) |> 
+  ungroup() |> 
+  filter(!is.na(description))
+
+source("R/import-bop.R")
+goto_en0114(bop_vw246, "bop_vw246.lst")
+
+###
+
+vw <- 
+  ja_cadastrados |> 
+  filter(str_detect(familia, "^VW"))
+
+bom_vw <- 
+  vw |> 
+  select(item) |> 
+  left_join(bom, join_by(item == material_number))
+
+source("R/import-bom.R")
+goto_en0113(bom_vw, "bom_vw.lst")
+
+
+ren216 <- 
+  f_estab |> 
+  select(item, fam_mat) |> 
+  filter(fam_mat == "^RN216") |> 
+  count(item) |> 
+  select(item)
+
+bop_246 <- 
+  vw246 |> 
+  left_join(bop, join_by(item == part_number))
+
+bop_246 <- 
+  bop_246 |> 
+  group_by(firm, item, description_1, description_2, description) |> 
+  summarise_all(first) |> 
+  ungroup()
+
+# IMPORTAR PROCESSO
+
+
+rn <- 
+  ja_cadastrados |> 
+  filter(str_detect(familia, "^RN"))
+
+rn <- 
+rn |>
+  select(item) |> 
+  left_join(bop, join_by(item == part_number))
+
+rn1 <- 
+  rn |> 
+  filter(familia %in% c("RNHJF10", "RNHHA10", 
+                        "RNU7910", "RNX5210", "RNX6210"))
+
+rn2 <- 
+  rn |> 
+  filter(familia %in% c("RNX5220", "RN131210",
+                        "RN21620", "RNX6510",
+                        "RNH6110", "RNH7920"))
+
+rn3 <- 
+  rn |> 
+  filter(familia %in% c("RNH7910", "RNX6220",
+                        "RNXBB10"))
+
+bop_rn1 <- 
+  rn1 |> 
+  select(item) |> 
+  left_join(bop, join_by(item == part_number)) |> 
+  group_by(firm, item, description_1, description_2, description) |> 
+  summarise_all(first) |> 
+  ungroup() |> 
+  filter(!is.na(description))
+
+bop_rn2 <- 
+  rn2 |> 
+  select(item) |> 
+  left_join(bop, join_by(item == part_number)) |> 
+  group_by(firm, item, description_1, description_2, description) |> 
+  summarise_all(first) |> 
+  ungroup()|> 
+  filter(!is.na(description))
+
+bop_rn3 <- 
+  rn3 |> 
+  select(item) |> 
+  left_join(bop, join_by(item == part_number)) |> 
+  group_by(firm, item, description_1, description_2, description) |> 
+  summarise_all(first) |> 
+  ungroup()|> 
+  filter(!is.na(description))
+
+source("R/import-bop.R")
+goto_en0114(bop_rn1, "bop_rn1.lst")
+goto_en0114(bop_rn2, "bop_rn2.lst")
+goto_en0114(bop_rn3, "bop_rn3.lst")
+```
+
+### STEL
+
+```{r}
+stel <- 
+  ja_cadastrados |> 
+  filter(str_detect(familia, "^ST"))
+
+bom_st <- 
+  stel |> 
+  select(item) |> 
+  left_join(bom, join_by(item == material_number))
+
+source("R/import-bom.R")
+goto_en0113(bom_st, "bom_st.lst")
+```
+
+### MANN
+
+```{r}
+mn <- 
+  ja_cadastrados |> 
+  filter(str_detect(familia, "^MN"))
+
+bom_mn <- 
+  mn |> 
+  select(item) |> 
+  left_join(bom, join_by(item == material_number))
+
+source("R/import-bom.R")
+goto_en0113(bom_mn, "bom_mn.lst")
+```
+
+# Novos Cadastros
+
+```{r}
+source("R/import-f.R")
+
+# Novos itens GMB
+novos_itens_gmb <- c("F03611011004A", "F03611017001A", "F03611020002A")
+
+novos_itens_gmb <- 
+  s_itens |> 
+  filter(item %in% novos_itens_gmb)
+novos_itens_gmb <- get_f_family_from_xpert_data(novos_itens_gmb)
+f_to_cd0209(novos_itens_gmb, "GMB7.lst")
+
+
+novos_itens_mbb <- c("F01908004001A", "F01908006001A", "F01908006002A",
+                     "F01908011001A", "F02108017001B")
+novos_itens_mbb <- 
+  s_itens |> 
+  filter(item %in% novos_itens_mbb)
+novos_itens_mbb <- get_f_family_from_xpert_data(novos_itens_mbb)
+f_to_cd0209(novos_itens_mbb, "MBB.lst")
+
+```
+
+## Depois...
+
+Depois de listar os códigos F, precisamos importar os itens de BOM.
+
+```{r}
+novos_itens_gmb <- 
+  novos_itens_gmb |> 
+  mutate(bom_item = map(item, ~ get_bom_from_id(.x, bom))) |> 
+  mutate(bop_item = map(item, ~ get_bop_from_id(.x, bop)))
+
+
+bop_spi |>  View()
+
+
+bom |> filter(material_number  == "I01123046001A")
+```
+
+```{r}
+import_bom_bop_by_family <- function(family) {
+
+  df <-
+    ja_cadastrados |>
+    filter(str_detect(familia, str_c("^", family)))
+           
+  bom <- 
+    df |> 
+    select(item) |> 
+    left_join(bom, join_by(item == material_number))
+
+  bom <- 
+    bom |> 
+    left_join(s_itens |> distinct(item, pseudo), join_by(item))
+  
+  goto_en0113(bom, str_c("bom_", family, ".lst"))
+
+  bop <- 
+    df |> 
+    select(item) |> 
+    left_join(bop, join_by(item == part_number)) |> 
+    group_by(firm, item, description_1, description_2, description) |> 
+    summarise_all(first) |> 
+    ungroup() |> 
+    filter(!is.na(description))
+
+  goto_en0114(bop, str_c("bop_", family, ".lst"))
+}
+
+source("R/import-bom.R")
+source("R/import-bop.R")
+familias <- 
+  ja_cadastrados |> 
+  filter(!is.na(fam_coml)) |> 
+  distinct(familia) |> 
+  filter(!str_detect(familia, "^10")) |>  
+  filter(!str_detect(familia, "^20")) |> 
+  mutate(familia = str_sub(familia, start = 1L, end = -3)) |> 
+  distinct(familia)
+
+fams <- 
+  familias |> 
+  pull(familia)
+walk(fams, import_bom_bop_by_family)
 
 
 ```

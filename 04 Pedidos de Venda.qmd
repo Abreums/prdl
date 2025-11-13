@@ -1,0 +1,122 @@
+---
+title: "Pedidos de Venda"
+author: "Simoldes"
+format: html
+editor: visual
+---
+
+## Relatórios de Vendas 2022 a 2025
+
+```{r}
+
+#### Relatórios de Vendas
+source("R/read-vendas.R")  
+spb_vendas <- 
+  get_itens_from_branch("SPB") 
+spb_vendas <-
+  spb_vendas |>
+  mutate(filial = "SPB")
+spi_vendas <- 
+  get_itens_from_branch("SPI") 
+spi_vendas <- 
+  spi_vendas |> 
+  mutate(filial = "SPI")  
+
+vendas <- 
+  rbind(spb_vendas, spi_vendas)
+
+vendas <- 
+  vendas |> 
+  mutate(year = year(as.Date(status))) |> 
+  group_by(item) |> 
+  summarise(year = max(year))
+
+# acrescentar informações de projeto
+vendas <- 
+  vendas |> 
+  left_join(itens |> select(item, prj_sigla, prj_desc)) |>
+  group_by(item, prj_sigla, prj_desc) |> 
+  summarise(year = max(year, na.rm = TRUE)) |> 
+  filter(str_detect(item, "^F"))
+
+vendas |> write_rds("data/vendas.rds")
+vendas <- read_rds("data/vendas.rds")
+
+```
+
+## Pedidos de Venda
+
+```{r}
+
+
+source("R/carteira-pedidos.R")  
+pedidos <- get_order_history()  
+# Vamos excluir os pedidos que não são de montadoras.
+pedidos <-
+  pedidos |>
+  filter(
+    !customer %in% c(
+      "BELLS INDUSTRIA",
+      "BIOPLASTICOS",
+      "CEMAS DO BRASIL",
+      "FAURECIA",
+      "FAURECIA AUTOMOT. BRASIL",
+      "FWC GANCHEIRAS",
+      "HB - SMR LOCACAO DE",
+      "HB SMR SP 0008-73",
+      "INDUSERVICE SERVICOS",
+      "KUNST",
+      "LINKPLAS IND.PLASTIC",
+      "MADIS CONFECCOES",
+      "NEW TECH COMPANY",
+      "NILKO TECNOLOGIA LTD",
+      "OMEGA RECYCLING",
+      "PKS PLASTICOS",
+      "PLASMAPLAST",
+      "SIMOLDES ACOS BRASIL",
+      "SUMMA POLIMEROS"
+    )
+  )
+pedidos |> write_rds("data/carteira-pedidos.RDS")
+pedidos <- read_rds("data/carteira-pedidos.RDS")
+
+
+```
+
+## vendas + Pedidos = Tudo junto
+
+```{r}
+
+
+## Vamos juntar os dados da Carteira de Pedidos com Vendas:
+# Vamos importar todos os produtos que aparecem nos relatórios de 
+# Pedidos de Vendas 2025
+pedidos_e_vendas <- 
+  pedidos |>
+  mutate(year = year(order_date)) |> 
+  group_by(item) |> 
+  summarise(year = max(year)) |> 
+  left_join(itens |> select(item, prj_sigla, prj_desc)) |> 
+  distinct(prj_sigla, prj_desc, year, item) |> 
+  filter(str_detect(item, "^F"))
+
+# Vamos acrescentar os produtos vendidos desde 2023
+pedidos_e_vendas <-
+  pedidos_e_vendas |> 
+  rbind(vendas) |> 
+  group_by(item) |> 
+  summarise(prj_sigla = first(prj_sigla, na.rm = TRUE),
+            prj_desc = first(prj_desc, na.rm = TRUE),
+            year = max(year)) |> 
+  select(item, prj_sigla, prj_desc, year) |> 
+  filter(str_detect(item, "^F"))
+
+pedidos_e_vendas |> write_rds("data/p-importar.rds")
+
+# ESTA LINHA PARA RECUPERAÇÃO FUTURA:
+pedidos_e_vendas <- read_rds("data/p-importar.rds")
+
+pedidos_e_vendas |> write_csv2("codigos-f.csv")
+
+
+```

@@ -16,60 +16,167 @@ goto_en0114 <- function(df, out_file = "default.lst") {
 
   to_exp <-
     df |>
-    mutate(
-      trx = 1,
-      item = part_number,
-      roteiro = "",
-      cod_operacao = 10,
-      cod_op_padrao = 10,
-      descricao_op = "op",
-      8, #   revisao
-      1, # * tipo_operacao 1 iNTERNA, 2 EXTERNA
-      8, # * dt_inicio DDMMAAAA
-      8, # * dt_termino DDMMAAAA
-      5, # * fator_refugo DECIMAL, 2
-      6, # * proporcao, DECIMAL, 2
-      9, # * grupo_maquina,
-      5, #   ficha_de_metodo
-      3, #   ponto_de_controle
-      5, #   codigo_mo_direta
-      1, # * emite_ficha (S/N)
-      1, # * ctrl_qual (S/N)
-      8, #   tempo_preparacao,
-      8, #   tempo_homem
-      8, #   tempo_maquina
-      1, # * unid_medida_tempo  1 = Horas  2 = Minutos   3 = Segundos  4 = Dias
-      5, # * num_unidades
-      3, #   num_homens
-      2, # * num_operacoes_simultaneas INTEIRO
-      8, #   dt_base
-      16, #   preco_base
-      8, #   dt_ultima_entrada
-      16, #   preco_ultima_entrada  DECIMAL, 4
-      8, #   dt_ultima_reposicao
-      16, #   preco_reposicao,
-      30, #   cod_video_operacao
-      100, #  narrativa_1
-      100, #  narrativa_2
-      100, #  narrativa_3
-      100, #  narrativa_4
-      100, #  narrativa_5
-      100, #  narrativa_6
-      100, #  narrativa_7
-      100, #  narrativa_8
-      100, #  narrativa_9
-      100, #  narrativa_10
-      1,  #  tempo_significativo
-    )
+    mutate(machine_size = str_sub(machine, start = 4L, end = -1)) |>
+    mutate(temp_dig = str_sub(machine, start = -1, end = -1)) |>
+    mutate(machine_size = ifelse(temp_dig == 0, machine_size, str_sub(machine_size, start = 1, end = -2))) |>
+    mutate(machine_size = as.integer(machine_size, na.rm = TRUE)) |>
+    mutate(trx = 1) |>
+    mutate(roteiro = "") |>
+    mutate(cod_operacao = 10) |>
+    mutate(grupo_maquina = case_when(
+        str_detect(description, "MONTAGEM")  & str_detect(firm, "7") ~ "MONT SPI",
+        str_detect(description, "MONTAGEM")  & str_detect(firm, "8") ~ "MONT SPB",
+        str_detect(description, "TERMO")     & str_detect(firm, "7") ~ "TERMO SPI",
+        str_detect(description, "TERMO")     & str_detect(firm, "8") ~ "TERMO SPB",
+        str_detect(description, "EMBALAGEM") & str_detect(firm, "7") ~ "REEMB SPI",
+        str_detect(description, "EMBALAGEM") & str_detect(firm, "8") ~ "REEMB SPB",
+        str_detect(description, "PINTURA")   & str_detect(firm, "8") ~ "PINT SPB",
+        str_detect(description, "INJECAO")   & machine_size < 451 & str_detect(firm, "7") ~ "I PEQ SPI",
+        str_detect(description, "INJECAO")   & machine_size < 451 & str_detect(firm, "8") ~ "I PEQ SPB",
+        str_detect(description, "INJECAO")   & machine_size < 801 & str_detect(firm, "7") ~ "I MED SPI",
+        str_detect(description, "INJECAO")   & machine_size < 801 & str_detect(firm, "8") ~ "I MED SPB",
+        str_detect(description, "INJECAO")   & str_detect(firm, "7") ~ "I GRD SPI",
+        str_detect(description, "INJECAO")   & str_detect(firm, "8") ~ "I GRD SPB",
+        TRUE ~ "PENDENTE"))
 
-    ) |>
-    select(
+  to_exp <-
+    to_exp |>
+  mutate(cod_op_padrao = case_when(
+        str_detect(description, "MONTAGEM")  & str_detect(firm, "7") ~ 204,
+        str_detect(description, "MONTAGEM")  & str_detect(firm, "8") ~ 304,
+        str_detect(description, "TERMO")     & str_detect(firm, "7") ~ 205,
+        str_detect(description, "TERMO")     & str_detect(firm, "8") ~ 305,
+        str_detect(description, "EMBALAGEM") & str_detect(firm, "7") ~ 206,
+        str_detect(description, "EMBALAGEM") & str_detect(firm, "8") ~ 306,
+        str_detect(description, "PINTURA")   & str_detect(firm, "8") ~ 307,
+        str_detect(description, "INJECAO")   & machine_size < 451 & str_detect(firm, "7") ~ 203,
+        str_detect(description, "INJECAO")   & machine_size < 451 & str_detect(firm, "8") ~ 303,
+        str_detect(description, "INJECAO")   & machine_size < 801 & str_detect(firm, "7") ~ 202,
+        str_detect(description, "INJECAO")   & machine_size < 801 & str_detect(firm, "8") ~ 302,
+        str_detect(description, "INJECAO")   & str_detect(firm, "7") ~ 201,
+        str_detect(description, "INJECAO")   & str_detect(firm, "8") ~ 301,
+        str_detect(firm, "7") ~ 102,
+        str_detect(firm, "8") ~ 103,
+        TRUE ~ 999))
+
+  to_exp <-
+    to_exp |>
+    mutate(cicle_type = ifelse(cicle_type == 0, 1, cicle_type)) |>
+    mutate(tempo_maquina = 60 / as.numeric(cicle_type)) |>
+    mutate(descricao_op = ifelse(!is.na(description_2),
+                            sprintf("%s %s", description_1, description_2),
+                            description_1),
+           descricao_op = ifelse(str_length(descricao_op) > 34,
+                            str_sub(descricao_op, start = 1, end = 34),
+                            descricao_op)) |>
+    mutate(descricao_op = str_to_upper(description)) |>
+    mutate(descricao_op = str_replace_all(description, "[[:punct:]]", "")) |>
+    mutate(descricao_op = iconv(description, to="ASCII//TRANSLIT"))
+
+  to_exp <-
+    to_exp |>
+    mutate(revisao = "",
+      tipo_operacao =  1,  # 1 iNTERNA, 2 EXTERNA
+      dt_inicio = "01012025",
+      dt_termino = "31129999",
+      fator_refugo = 0,
+      proporcao = str_remove_all(sprintf("%5s", sprintf("%.2f", 100)), "[[:punct:]]"), # 4, #   fator de perda (decimal, 2)100, DECIMAL, 2
+      ficha_de_metodo = case_when(
+        str_detect(description, "MONTAGEM") ~ 104,
+        str_detect(description, "TERMO")    ~ 105,
+        str_detect(description, "EMBALAGEM") ~ 106,
+        str_detect(description, "PINTURA")   ~ 107,
+        str_detect(description, "INJECAO")   ~ 100,
+        TRUE ~ 100
+      )) |>
+    mutate(
+      ponto_de_controle = "",
+      codigo_mo_direta = "",
+      emite_ficha = "N",
+      ctrl_qual = "N",
+      tempo_preparacao = str_remove_all(sprintf("%9s", sprintf("%.3f", as.integer(set_up_time))), "[[:punct:]]"),
+      tempo_homem = "",
+      tempo_maquina = str_remove_all(sprintf("%9s", sprintf("%.3f", tempo_maquina)), "[[:punct:]]"),
+      unid_medida_tempo = 2, #   1 = Horas  2 = Minutos   3 = Segundos  4 = Dias
+      num_unidades = 1,
+      num_homens = "",
+      num_operacoes_simultaneas = 1) |>
+    mutate(
+      dt_base = "",
+      preco_base = "",
+      dt_ultima_entrada = "",
+      preco_ultima_entrada = "",
+      dt_ultima_reposicao = "",
+      preco_reposicao = "",
+      cod_video_operacao = "",
+      narrativa_1 = "",
+      narrativa_2 = "",
+      narrativa_3 = "",
+      narrativa_4 = "",
+      narrativa_5 = "",
+      narrativa_6 = "",
+      narrativa_7 = "",
+      narrativa_8 = "",
+      narrativa_9 = "",
+      narrativa_10 = "",
+      tempo_significativo = "")
+
+  to_exp <-
+    to_exp |>
+    filter(!is.na(description_1))
+
+  to_exp <-
+    to_exp |>
+  select(
+      trx,
+      item,
+      roteiro,
+      cod_operacao,
+      cod_op_padrao,
+      descricao_op,
+      revisao,
+      tipo_operacao,
+      dt_inicio,
+      dt_termino,
+      fator_refugo,
+      proporcao,
+      grupo_maquina,
+      ficha_de_metodo,
+      ponto_de_controle,
+      codigo_mo_direta,
+      emite_ficha,
+      ctrl_qual,
+      tempo_preparacao,
+      tempo_homem,
+      tempo_maquina,
+      unid_medida_tempo,
+      num_unidades,
+      num_homens,
+      num_operacoes_simultaneas,
+      dt_base,
+      preco_base,
+      dt_ultima_entrada,
+      preco_ultima_entrada,
+      dt_ultima_reposicao,
+      preco_reposicao,
+      cod_video_operacao,
+      narrativa_1,
+      narrativa_2,
+      narrativa_3,
+      narrativa_4,
+      narrativa_5,
+      narrativa_6,
+      narrativa_7,
+      narrativa_8,
+      narrativa_9,
+      narrativa_10,
+      tempo_significativo
     )
 
   to_exp <- as.data.frame(to_exp)
 
   # * = obrigatório
-  cd0209_fix_width <- c(
+  en0114_fix_width <- c(
      1, # * trx: 1: create, 2: update, 3: delete
     16, # * item
     16, #   roteiro
@@ -112,7 +219,7 @@ goto_en0114 <- function(df, out_file = "default.lst") {
     100, #  narrativa_8
     100, #  narrativa_9
     100, #  narrativa_10
-     1,  #  tempo_significativo
+     1  #  tempo_significativo
   )
 
   #   |----------------------------------------------------------------------------------------------------------------------------------|
@@ -197,113 +304,10 @@ goto_en0114 <- function(df, out_file = "default.lst") {
   gdata::write.fwf(
     x = to_exp,
     file = out_file,
-    width = cd0209_fix_width,
+    width = en0114_fix_width,
     colnames = FALSE,
     rownames = FALSE,
     sep = ""
   )
 
 }
-
-
-# +----------------------------------------------------------------------------------------------------------------------------------+
-#   |                                 Layout do Arquivo de Importação de ESTRUTURAS/ALTERNATIVOS                                       |
-#   |----------------------------------------------------------------------------------------------------------------------------------|
-#   |                                                Nome do Arquivo: A ser informado                                                  |
-#   |                                                        Formato: Texto                                                            |
-#   |                                            Tamanho do Registro: VARIAVEL                                                         |
-#   |----------------------------------------------------------------------------------------------------------------------------------|
-#   | Ordem |                         Descrição                       | Tamanho | Início | Término | Conteúdo | Decimais | Obrigatório |
-#   |-------+---------------------------------------------------------+---------+--------+---------+----------+----------+-------------|
-#   |    1  | Tipo de Transação                                       |     1   |     1  |     1   | Inteiro  |          |     Sim     |
-#   |       | Onde: 1 - Estrutura                                     |         |        |         |          |          |             |
-#   |       |       2 - Alternativo                                   |         |        |         |          |          |             |
-#   |       |                                                         |         |        |         |          |          |             |
-#   |-------+---------------------------------------------------------+---------+--------+---------+----------+----------+-------------|
-#   |       | Layout para tipo de transação = 1 (Estrutura)           |         |        |         |          |          |             |
-#     |       |                                                         |         |        |         |          |          |             |
-#     |    2  | Código do Item Pai                                      |    16   |     2  |    17   | Caracter |          |     Sim     |
-#     |    3  | Sequência                                               |     5   |    18  |    22   | Inteiro  |          |     Sim     |
-#     |    4  | Código do Componente                                    |    16   |    23  |    38   | Caracter |          |     Sim     |
-#     |    5  | Revisão                                                 |     8   |    39  |    46   | Caracter |          |     Não     |
-#     |    6  | Fantasma (S/N)                                          |     1   |    47  |    47   | Caracter |          |     Sim     |
-#     |    7  | Fator Perda                                             |     4   |    48  |    51   | Decimal  |     2    |     Não     |
-#     |    8  | Proporção                                               |     5   |    52  |    56   | Decimal  |     2    |     Sim     |
-#     |    9  | Série Inicial                                           |    12   |    57  |    68   | Caracter |          |     Não     |
-#     |   10  | Série Final                                             |    12   |    69  |    80   | Caracter |          |     Não     |
-#     |   11  | Quantidade Usada                                        |    16   |    81  |    96   | Decimal  |    10    |     Sim     |
-#     |   12  | Tempo de Reserva (? ou um valor maior que zero)         |     4   |    97  |   100   | Inteiro  |          |     Não     |
-#     |   13  | Data Início                                             |     8   |   101  |   108   | Data     |          |     Sim     |
-#     |       | Formato ddmmaa                                          |         |        |         |          |          |             |
-#     |       | Onde    dd   = Dia                                      |         |        |         |          |          |             |
-#       |       |         mm   = Mês                                      |         |        |         |          |          |             |
-#         |       |         aaaa = Ano                                      |         |        |         |          |          |             |
-#           |   14  | Data Término                                            |     8   |   109  |   116   | Data     |          |     Sim     |
-#           |       | Formato ddmmaaaa                                        |         |        |         |          |          |             |
-#           |       | Onde    dd   = Dia                                      |         |        |         |          |          |             |
-#             |       |         mm   = Mês                                      |         |        |         |          |          |             |
-#               |       |         aaaa = Ano                                      |         |        |         |          |          |             |
-#                 |   15  | Código Roteiro de Fabricação                            |    16   |   117  |   132   | Caracter |          |     Não     |
-#                 |   16  | Código Operação                                         |     5   |   133  |   137   | Inteiro  |          |     Não     |
-#                 |   17  | Local Montagem                                          |    55   |   138  |   192   | Caracter |          |     Não     |
-#                 |   18  | Observação                                              |    40   |   193  |   232   | Caracter |          |     Não     |
-#                 |   19  | Referência Pai                                          |     8   |   233  |   240   | Caracter |          |     Não     |
-#                 |   20  | Referência Filho                                        |     8   |   241  |   248   | Caracter |          |     Não     |
-#                 |   21  | Tipo Sobra                                              |     2   |   249  |   250   | Inteiro  |          |     Sim     |
-#                 |       | 1 - Retorno de Requisição \                             |         |        |         |          |          |             |
-#                 |       | 2 - Sobra                  > Quantidade Negativa        |         |        |         |          |          |             |
-#                 |       | 3 - Coproduto             /                             |         |        |         |          |          |             |
-#                 |       | 4 - Normal -> Quantidade Positiva                       |         |        |         |          |          |             |
-#                 |   22  | Quantidade do Item Pai                                  |    12   |   251  |   262   | Decimal  |     4    |     Sim     |
-#                 |   23  | Veículo (S/N)                                           |     1   |   263  |   263   | Caracter |          |     Não     |
-#                 |   24  | Percentual Distribuição Veículo                         |     7   |   264  |   270   | Decimal  |     4    |     Não     |
-#                 |   25  | Utiliza Quantidade Fixa?                                |     1   |   271  |   271   | Caracter |          |     Não     |
-#                 |-------+---------------------------------------------------------+---------+--------+---------+----------+----------+-------------|
-#                 |       | Layout para tipo de transação = 2 (Alternativo)         |         |        |         |          |          |             |
-#                   |       |                                                         |         |        |         |          |          |             |
-#                   |    2  | Código do Item Pai                                      |    16   |     2  |    17   | Caracter |          |     Sim     |
-#                   |    3  | Sequência                                               |     5   |    18  |    22   | Inteiro  |          |     Sim     |
-#                   |    4  | Código do Componente                                    |    16   |    23  |    38   | Caracter |          |     Sim     |
-#                   |    5  | Ordem                                                   |     5   |    39  |    43   | Inteiro  |          |     Sim     |
-#                   |    6  | Código do Componente Alternativo                        |    16   |    44  |    59   | Caracter |          |     Sim     |
-#                   |    7  | Quantidade Usada                                        |    16   |    60  |    75   | Decimal  |    10    |     Sim     |
-#                   |    8  | Fator de Perda                                          |     4   |    76  |    79   | Decimal  |     2    |     Não     |
-#                   |    9  | Observação                                              |    40   |    80  |   119   | Caracter |          |     Não     |
-#                   +----------------------------------------------------------------------------------------------------------------------------------+
-#
-#
-#
-
-build_file_to_en0113 <- function(data) {
-
-
-  # * = obrigatório
-  en0113_fix_width <- c(
-    1,  # * trx: 1 - Estrutura   2 - Alternativo
-    16, #  Código do Item Pai    | Caracter
-    5,  #  Sequência             | Inteiro
-    16, #  Código do Componente  | Caracter
-    8,  #  Revisão               | Caracter |     Não
-    1,  #  Fantasma (S/N)        | Caracter |
-    4,  #  Fator Perda           | Decimal  |     Não     |
-    5,  #  Proporção             | Decimal
-    12, #  Série Inicial         | Caracter |     Não
-    12, #  Série Final           | Caracter |    Não
-    16, #  Quantidade Usada      | Decimal  |
-    4,  #  Tempo de Reserva (? ou um valor maior que zero)   | Inteiro  | Não
-    8,  #  Data Início          | Data     | Formato ddmmaaaa                                          |         |        |         |          |          |             |
-    8,  #  Data Término         | Data     | Formato ddmmaaaa
-    16, #  Código Roteiro de Fabricação    | Caracter |          |     Não
-    5,  #  Código Operação      | Inteiro  |          |     Não     |
-    55, #  Local Montagem       | Caracter |          |     Não     |
-    40, #  Observação           | Caracter |          |     Não     |
-    8,  #  Referência Pai       | Caracter |          |     Não     |
-    8,  #  Referência Filho     | Caracter |          |     Não     |
-    2,  #  Tipo Sobra           | Inteiro  | 1 - Retorno de Requisição 2 - Sobra > Quantidade Negativa 3 - Coproduto 4 - Normal -> Quantidade Positiva
-    12, # Quantidade do Item Pai | Decimal  |
-    1,  # Veículo (S/N)         | Caracter |          |     Não
-    7,  # Percentual Distribuição Veículo  | Decimal  |     Não
-    1,  # Utiliza Quantidade Fixa? |  Caracter |          |     Não
-  )
-}
-

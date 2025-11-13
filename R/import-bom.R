@@ -21,16 +21,19 @@
 
 goto_en0113 <- function(df, out_file = "default.lst") {
 
+  df <- bom_vw246
     to_exp <-
     df |>
     filter(!str_detect(bom_component, "^58")) |>
     mutate(
       tipo_trx = 1,
-      id_pai = material_number,
+      id_pai = item,
       sequencia = as.integer(bom_item_number),
       id_filho = bom_component,
-      revisão = "",
-      fantasma = pseudo,
+      revisão = "") |>
+    mutate(
+      fantasma = pseudo) |>
+    mutate(
       fator_perda = str_remove_all(sprintf("%5s", sprintf("%.2f", 0)), "[[:punct:]]"), # 4, #   fator de perda (decimal, 2)
       utiliza_qtde_fixa = ifelse(base_quantidade == "*", "S", "N"),
       temein = case_when(

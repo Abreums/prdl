@@ -6,15 +6,7 @@
 
 read_itens_summary <- function(filename_itens = "default") {
 
-  if(filename_itens == "default") {
-    #filename_itens <- here("data", "Artigos 2025-07-08.xlsx")
-    # filename_itens <- here("data", "Artigos 2025-09-02.xlsx")
-    filename_itens <- here("data", "Artigos 2025-10-21.xlsx")
-  }
-
-  itens <-
-    readxl::read_excel(filename_itens) |>
-    janitor::clean_names()
+  itens <- read_itens(filename_itens)
 
   itens <-
     itens |>
@@ -60,10 +52,11 @@ read_itens_summary <- function(filename_itens = "default") {
 read_itens <- function(filename_itens = "default") {
 
   if(filename_itens == "default") {
-    #filename_itens <- here("data", "Artigos 2025-07-08.xlsx")
+    # filename_itens <- here("data", "Artigos 2025-07-08.xlsx")
     # filename_itens <- here("data", "Artigos 2025-09-02.xlsx")
-    filename_itens <- here("data", "Artigos 2025-10-21.xlsx")
-  }
+    # filename_itens <- here("data", "Artigos 2025-10-21.xlsx")
+    filename_itens <- here("data", "Artigos 2025-11-07.xlsx")
+    }
 
   itens <-
     readxl::read_excel(filename_itens) |>

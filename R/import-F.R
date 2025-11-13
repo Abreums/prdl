@@ -1,3 +1,118 @@
+
+# Determina família
+get_f_family_from_xpert_data <- function(novos_itens){
+
+  novos_itens <-
+    novos_itens |>
+    mutate(grupo_estoque = "10") |>
+    mutate(fam_mat = case_when(
+      str_detect(prj_sigla, "CX") ~   "CXPLST",
+      str_detect(prj_sigla, "X70") ~  "RNX70",
+      str_detect(prj_sigla, "X62") ~  "RNX70",
+      str_detect(prj_sigla, "1312") ~ "RN1312",
+      str_detect(prj_sigla, "VIVA") ~ "GMVIVA",
+      str_detect(prj_sigla, "V230") ~ "VWGOLF",
+      str_detect(prj_sigla, "UPPP") ~ "VWUP",
+      str_detect(prj_sigla, "UPC") ~  "VWUP",
+      str_detect(prj_sigla, "UP") ~   "VWUP",
+      str_detect(prj_sigla, "U79P") ~ "RNU79",
+      str_detect(prj_sigla, "SCXD") ~ "PCSC",
+      str_detect(prj_sigla, "SCDI") ~ "PCSC",
+      str_detect(prj_sigla, "PM7") ~  "GMPM7",
+      str_detect(prj_sigla, "PA") ~   "XXPA",
+      str_detect(prj_sigla, "P426") ~ "VV426",
+      str_detect(prj_sigla, "OTH") ~  "OUTROS",
+      str_detect(prj_sigla, "NTC") ~  "MBNTC",
+      str_detect(prj_sigla, "NCG") ~  "SCNCG",
+      str_detect(prj_sigla, "MQBF") ~ "VWMQB",
+      str_detect(prj_sigla, "MQB") ~  "VWMQB",
+      str_detect(prj_sigla, "LTC") ~  "MBLTC",
+      str_detect(prj_sigla, "L98") ~  "XXL98",
+      str_detect(prj_sigla, "HPN") ~  "XXHPN",
+      str_detect(prj_sigla, "HJF") ~  "RNHJF",
+      str_detect(prj_sigla, "HJDE") ~ "RNHJDE",
+      str_detect(prj_sigla, "HJDD") ~ "RNHJDD",
+      str_detect(prj_sigla, "FX/J") ~ "XXSTFX",
+      str_detect(prj_sigla, "FPN") ~  "XXFPN",
+      str_detect(prj_sigla, "FOX") ~  "VWFOX",
+      str_detect(prj_sigla, "F1H") ~  "STF1H",
+      str_detect(prj_sigla, "CUVF") ~ "VW246",
+      str_detect(prj_sigla, "CUV") ~  "VW246",
+      str_detect(prj_sigla, "C4P") ~  "PCC4",
+      str_detect(prj_sigla, "C4E") ~  "PCC4",
+      str_detect(prj_sigla, "B02A") ~ "RNB02A",
+      str_detect(prj_sigla, "AI94") ~ "PCAI94",
+      str_detect(prj_sigla, "AI58") ~ "PCAI58",
+      str_detect(prj_sigla, "A91") ~  "PC208",
+      str_detect(prj_sigla, "516T") ~ "ST516",
+      str_detect(prj_sigla, "270H") ~ "VW270",
+      str_detect(prj_sigla, "23X") ~  "VW23X",
+      str_detect(prj_sigla, "220P") ~ "VW220",
+      str_detect(prj_sigla, "220C") ~ "VW220",
+      str_detect(prj_sigla, "216T") ~ "VW216",
+      str_detect(prj_sigla, "216C") ~ "VW216",
+      TRUE ~ NA
+    )) |>
+    mutate(fam_mat = str_c(prj_sigla, "10")) |>
+    mutate(fam_com = case_when(
+      str_detect(prj_sigla, "CX") ~ "CX",
+      str_detect(prj_sigla, "X70") ~  "RSA",
+      str_detect(prj_sigla, "X62") ~  "RSA",
+      str_detect(prj_sigla, "1312") ~ "RSA",
+      str_detect(prj_sigla, "VIVA") ~ "GMB",
+      str_detect(prj_sigla, "V230") ~ "VW",
+      str_detect(prj_sigla, "UPPP") ~ "VW",
+      str_detect(prj_sigla, "UPC") ~  "VW",
+      str_detect(prj_sigla, "UP") ~   "VW",
+      str_detect(prj_sigla, "U79P") ~ "RSA",
+      str_detect(prj_sigla, "SCXD") ~ "STEL",
+      str_detect(prj_sigla, "SCDI") ~ "STEL",
+      str_detect(prj_sigla, "PM7") ~  "GMB",
+      str_detect(prj_sigla, "PA") ~   "OUTROS",
+      str_detect(prj_sigla, "P426") ~ "VOLVO",
+      str_detect(prj_sigla, "OTH") ~  "OUTROS",
+      str_detect(prj_sigla, "NTC") ~  "MBB",
+      str_detect(prj_sigla, "NCG") ~  "SCANIA",
+      str_detect(prj_sigla, "MQBF") ~ "VW",
+      str_detect(prj_sigla, "MQB") ~  "VW",
+      str_detect(prj_sigla, "LTC") ~  "MBB",
+      str_detect(prj_sigla, "L98") ~  "OUTROS",
+      str_detect(prj_sigla, "HPN") ~  "OUTROS",
+      str_detect(prj_sigla, "HJF") ~  "RSA",
+      str_detect(prj_sigla, "HJDE") ~ "RSA",
+      str_detect(prj_sigla, "HJDD") ~ "RSA",
+      str_detect(prj_sigla, "FX/J") ~ "STEL",
+      str_detect(prj_sigla, "FPN") ~  "OUTROS",
+      str_detect(prj_sigla, "FOX") ~  "VW",
+      str_detect(prj_sigla, "F1H") ~  "STEL",
+      str_detect(prj_sigla, "CUVF") ~ "VW",
+      str_detect(prj_sigla, "CUV") ~  "VW",
+      str_detect(prj_sigla, "C4P") ~  "STEL",
+      str_detect(prj_sigla, "C4E") ~  "STEL",
+      str_detect(prj_sigla, "B02A") ~ "RSA",
+      str_detect(prj_sigla, "AI94") ~ "STEL",
+      str_detect(prj_sigla, "AI58") ~ "STEL",
+      str_detect(prj_sigla, "A91") ~  "STEL",
+      str_detect(prj_sigla, "516T") ~ "STEL",
+      str_detect(prj_sigla, "270H") ~ "VW",
+      str_detect(prj_sigla, "23X") ~  "VW",
+      str_detect(prj_sigla, "220P") ~ "VW",
+      str_detect(prj_sigla, "220C") ~ "VW",
+      str_detect(prj_sigla, "216T") ~ "VW",
+      str_detect(prj_sigla, "216C") ~ "VW",
+      TRUE ~ NA
+    )) |>
+    select(item,
+           desc,
+           grupo_estoque,
+           fam_mat,
+           fam_com,
+           un,
+           estabelecimento,
+           cod_comp)
+}
+
+
 # IMPORT ITENS CD0209
 
 # f_to_cd0209 prepara um arquivo com componentes para serem importados em massa
@@ -16,7 +131,7 @@ f_to_cd0209 <- function(f_df, out_file = "default.lst") {
 
   # Para importar matéria primas, vamos utilizar a listagem de
   # "Já Cadastrados" para avaliar se é uma nova inclusão ou uma atualização
-  ja_cadastrados <- read_excel(here("data", "jah_cadastrados.xlsx")) |>
+  ja_cadastrados <- read_excel(here("data", "2025-11-10 ja-cadastrados.xlsx")) |>
     janitor::clean_names() |>
     filter(str_detect(item, "^F")) |>
     select(item) |>
