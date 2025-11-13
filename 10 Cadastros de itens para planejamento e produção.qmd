@@ -1,0 +1,66 @@
+---
+title: "Cadastro de Itens Acabados e Planejamento"
+author: "Simoldes"
+format: html
+editor: visual
+---
+
+## CD0204 - Cadastro de Itens
+
+Dados:
+
+-   Item: código único
+
+-   Descrição: descrição do item
+
+As seguintes informações devem ser obedecidas:
+
+1.  Aba Básico:
+
+![](images/cd0204-aba-basico.png){width="480"}
+
+-   Grupo de Estoque: 10 “Acabados”
+
+-   Família: a família do item terá a seguinte estrutura:
+
+    -   2 letras representando o cliente: VW, RN, ST, MB, etc
+
+    -   3 ou 4 letras indicando o projeto: FOX, R1213, 216, etc
+
+    -   Código do grupo de estoque: 10
+
+-   Família Comercia: 2 letras representando o cliente
+
+-   Unidade de Medida: PC “Peça”
+
+-   Estabelecimento: em qual das plantas a peça terá sua produção terminada:
+
+    -   102 – SPI
+
+    -   103 – SPB
+
+2.  Aba Complementar:
+
+![](images/cd0204-aba-complementar.png){width="480"}
+
+-   Código complementar: código do item no cliente
+
+    -   Não deve conter nem espaços nem caracteres especiais!
+
+-   Item deve ser exportado para estabelecimentos
+
+![](images/cd0204-exportar-para-estabelecimentos.png){width="480"}
+
+## EN0105 - Estrutura
+
+Cadastro de Estrutura
+
+## CP0105 Reporte por Operação (chão de fábrica)
+
+sdf
+
+## CD0412 - Relacionamento Grupo Máquina x Turno
+
+asdf
+
+## DB0304 - Demonstrativo de Cálculo
