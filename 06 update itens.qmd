@@ -1,0 +1,89 @@
+---
+title: "Update base"
+author: "Simoldes"
+format: html
+editor: visual
+---
+
+```{r}
+#| echo: false
+library(tidyverse)
+
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
+
+```{r}
+novos_itens <- tibble(
+  item = c(
+  "F00222002005B", "F00222006005B", "4601107", "4919105", 
+  "F00717002008B", "F00717002022B", "F00717002024B", "F00717002044B",
+  "F00717003006B", "F00717003019B", "F00717003028A", "F00717051001B",
+  "F01009007009B", "F01009007053B", "F01009011033B", "F01009011035B",
+  "F01009013004B", "F01009013031B", "F01009014008B", "F01009068005B",
+  "F01009069001A", "F01009069005B", "F01009083005C", "F02017019002A"),
+  cod_cli <- c(
+    "809018346R",	"809001103R", "5Z0867815A", "5Z0867816A", 
+    "2GP898011ATUZ", "2GP867011AOEG", "2GP867011OEF", "2GP867011BAAM",
+    "2GP898012ATUZ", "2GP867012OEF", "2GP867012AJYS", "2G4867255EKJ1",
+    "5Z4867011BFIOM", "5Z4867011BKHBR", "5Z4867212AFGAN", "5Z4867212AKGAH",
+    "5Z4867211AHIOM", "5Z4867211AHGAN", "5Z4867211AEIOM", "5Z48671109B9",
+    "5Z4867109A71N", "5Z48671099B9", "5Z4837114BZI5", "6Q4858883TR2")
+)
+
+```
+
+Valida nos já cadastrados
+
+```{r}
+source("R/ja-cadastrados.R")
+ja_cadastrados <- read_ja_cadastrados(TRUE)
+
+novos_ja_cadastrados <- 
+  ja_cadastrados |> 
+  inner_join(novos_itens, join_by(item))
+
+novos_ja_cadastrados |> nrow()
+
+prjs <- 
+  ja_cadastrados |> 
+  select(item, familia) |> 
+  mutate(prj = ifelse(str_detect(item, "^[F,I]"), 
+                      str_sub(item, start = 1, end = 6),
+                      str_sub(item, start = 1, end = 2))) |> 
+  distinct(prj, familia) |> 
+  filter(!is.na(prj))
+prjs |> View()
+
+novos_itens |> count(item, sort = T)
+```
+
+Dados dos novos itens
+
+```{r}
+novos_itens <- 
+  novos_itens |> 
+  mutate(prj = ifelse(str_detect(item, "^F"), 
+                      str_sub(item, start = 1, end = 6), 
+                      str_sub(item, start = 1, end = 2)))
+
+novos_itens |> View()
+
+novos_itens <- 
+  novos_itens |>
+  left_join(prjs, join_by(prj))
+
+novos_itens |> count(item, sort = T)
+novos_itens |> View()
+
+
+source("R/read-itens.R")
+itens <- read_itens()
+itens |> nrow()
+novos_itens <- 
+  novos_itens |> 
+  left_join(itens, join_by(item == tetenr))
+novos_itens |> nrow()
+
+
+```
