@@ -1,0 +1,40 @@
+---
+title: "07 Moldes"
+author: "Simoldes"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(here)
+
+```
+
+Na BOP do XPERT é possível recuparar uma lista de moldes por peça
+
+```{r}
+
+source("R/read-bop.R")
+bop <- read_bop()
+
+moldes <- 
+  bop |> 
+  select(molde = tool, item = part_number, machine) |> 
+  distinct(item, molde, machine)
+
+
+moldes <- 
+  moldes |> 
+  left_join(itens |> select(item = tetenr, desc), join_by(item))
+
+moldes |> write_csv("moldes.csv")
+
+moldes |> filter(item == "I01716030001A") |> distinct(item, molde, machine) |> View()
+
+itens |> filter(tetenr == 'I01716030001A') |> View()
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).

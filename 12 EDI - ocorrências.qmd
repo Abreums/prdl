@@ -1,0 +1,16 @@
+---
+title: "EDI"
+author: "Simoldes"
+format: html
+editor: visual
+---
+
+## Ocorrências
+
+Para acessar as ocorrências com EDIs:
+
+![](images/edi-ocorrencias.png)
+
+E em seguida a opção "Ocorrências Processos EDI":
+
+![](images/edi-ocorrencia-processo-edi.png){width="531"}

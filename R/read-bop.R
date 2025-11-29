@@ -1,8 +1,17 @@
 # read BoP
 
-read_bop <- function(bop_file) {
-  bop <- readxl::read_excel(bop_file) |>
-    janitor::clean_names()
+read_bop <- function(bop_file = NULL) {
+
+  if(is.null(bop_file)){
+    bop <-
+      readxl::read_excel(here::here("data", "SPB routing 2025-11-12.xlsx")) |>
+      rbind(
+        readxl::read_excel(here::here("data", "SPI routing 2025-11-12.xlsx"))) |>
+      janitor::clean_names()
+  } else{
+    bop <- readxl::read_excel(bop_file) |>
+      janitor::clean_names()
+  }
 
   bop <-
     bop |>

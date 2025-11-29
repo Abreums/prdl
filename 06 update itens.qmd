@@ -8,7 +8,8 @@ editor: visual
 ```{r}
 #| echo: false
 library(tidyverse)
-
+library(here)
+library(readxl)
 ```
 
 The `echo: false` option disables the printing of code (only output is displayed).
@@ -22,7 +23,7 @@ novos_itens <- tibble(
   "F01009007009B", "F01009007053B", "F01009011033B", "F01009011035B",
   "F01009013004B", "F01009013031B", "F01009014008B", "F01009068005B",
   "F01009069001A", "F01009069005B", "F01009083005C", "F02017019002A"),
-  cod_cli <- c(
+  cod_cli = c(
     "809018346R",	"809001103R", "5Z0867815A", "5Z0867816A", 
     "2GP898011ATUZ", "2GP867011AOEG", "2GP867011OEF", "2GP867011BAAM",
     "2GP898012ATUZ", "2GP867012OEF", "2GP867012AJYS", "2G4867255EKJ1",
@@ -30,6 +31,7 @@ novos_itens <- tibble(
     "5Z4867211AHIOM", "5Z4867211AHGAN", "5Z4867211AEIOM", "5Z48671109B9",
     "5Z4867109A71N", "5Z48671099B9", "5Z4837114BZI5", "6Q4858883TR2")
 )
+
 
 ```
 
@@ -55,7 +57,6 @@ prjs <-
   filter(!is.na(prj))
 prjs |> View()
 
-novos_itens |> count(item, sort = T)
 ```
 
 Dados dos novos itens
@@ -67,15 +68,23 @@ novos_itens <-
                       str_sub(item, start = 1, end = 6), 
                       str_sub(item, start = 1, end = 2)))
 
-novos_itens |> View()
+novos_f <- novos_itens |> filter(str_detect(item, "^F"))
+novos_mp <- novos_itens |> filter(!str_detect(item, "^F"))
 
-novos_itens <- 
-  novos_itens |>
+novos_f <- 
+  novos_f |>
   left_join(prjs, join_by(prj))
 
-novos_itens |> count(item, sort = T)
-novos_itens |> View()
+novos_f |> count(item, sort = T)
 
+novos_mp <- 
+  novos_mp |> 
+  mutate(familia = "3049102") |> 
+  mutate(prj = "49")
+
+novos_itens <- 
+  rbind(novos_f, novos_mp)
+novos_itens |> count(item, sort = T)
 
 source("R/read-itens.R")
 itens <- read_itens()
@@ -85,5 +94,61 @@ novos_itens <-
   left_join(itens, join_by(item == tetenr))
 novos_itens |> nrow()
 
+source("R/import-F.R")
+
+#       item,
+#       desc,
+#       grupo_estoque,
+#       fam_mat,
+#       fam_com,
+#       un,
+#       estabelecimento,
+#       cod_comp
+novos_f <- 
+  novos_itens |> 
+  filter(str_detect(item, "^F")) |> 
+  select(item, desc, desc2, grupo_estoque, fam_mat = familia, fam_com = prj,
+         un, estabelecimento, cod_comp = tezinr, cod_cli) |> 
+  mutate(cod_comp = str_replace_all(cod_comp, " ", "")) |> 
+  mutate(compara = str_equal(cod_comp, cod_cli ))
+
+novos_f <- 
+  novos_f |> 
+  mutate(cod_comp = cod_cli) |> 
+  mutate(fam_com = str_sub(fam_mat, start = 1, end = 2))
+
+novos_f |> View()
+
+f_to_cd0209(novos_f, "novos-f.lst")
+
+# f_to_cd0209 prepara um arquivo com componentes para serem importados em massa
+# components é um tibble com os campos:
+#       item,
+#       desc,
+#       grupo_estoque,
+#       fam_mat,
+#       fam_com,
+#       un,
+#       estabelecimento,
+#       cod_comp
+# out_file é o nome do arquivo gerado
+#
+
+novos_mp <- 
+  novos_itens |> 
+  filter(!str_detect(item, "^F")) |> 
+  select(item, desc, desc2, grupo_estoque, fam_mat = familia, fam_com = prj,
+         un, estabelecimento, cod_comp = tezinr, cod_cli) |> 
+  mutate(cod_comp = str_replace_all(cod_comp, " ", "")) |> 
+  mutate(compara = str_equal(cod_comp, cod_cli ))
+
+novos_mp <- 
+  novos_mp |> 
+  mutate(cod_comp = cod_cli) |> 
+  mutate(fam_com = str_sub(fam_mat, start = 1, end = 2))
+
+novos_mp |> View()
+source("R/import-mp.R")
+mp_to_cd0209(novos_mp, "novos-mp.lst")
 
 ```

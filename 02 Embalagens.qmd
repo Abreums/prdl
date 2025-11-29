@@ -17,6 +17,46 @@ Requisitos:
 
 -   lista de peças F
 
+## XPERT
+
+No XPERT foi identificada a seguinte classificação de código de item (2 primeiros digitos):
+
+-   51 caixa
+
+-   52 caixa
+
+-   53 sep
+
+-   54 filme ou adesivo
+
+-   57 isomanta
+
+-   58 caixas e paletes
+
+-   59 etiquetas
+
+-   61 saco
+
+-   62 saco
+
+-   63 saco
+
+```{r}
+xp_emb <- 
+  tibble(
+    cod = c(51, 52, 53, 54, 57, 58, 59, 61, 62, 63),
+    tipo = c("CX", "CX", "SEP", "FILME", "ISOMANTA", "CX OU PAL", "ETIQ", "SACO", "SACO", "SACO")
+  )
+
+```
+
+## Arquivo "Embalagem" contém sigla e dimensões
+
+```{r}
+s_emb <- read_embalagens()
+
+```
+
 ## Levantar embalagens por item
 
 ```{r}
@@ -25,7 +65,7 @@ source("R/embalagem.R")
 
 embalagens <- 
   f_estab |> 
-  mutate(embalagem = map(item_bom, ~ get_embalagem(.x))) |> 
+  mutate(embalagem = map(item_bom, ~ get_embalagem_from_bom(.x))) |> 
   select(item_fonte = item, 
          embalagem, estabelecimento, fam_mat) |> 
   filter(!map_lgl(embalagem, ~ is_empty(.x[[1]])))
@@ -68,6 +108,7 @@ emb1 <-
   left_join(embalagens, join_by(item))
 
 emb1 |> View()
+
 ```
 
 ## Embalagens XPert
@@ -117,4 +158,39 @@ item_emb |> distinct(item, embalagem, estabelecimento, pecas_por_embalagem)
 item_emb |> write_csv2("item-embalagem.csv")
 
 
+```
+
+```{r}
+
+emb <- 
+  read_excel("C:/Datasul/embalagens.xlsx",
+             sheet = "Embalagens") |> 
+  janitor::clean_names()
+
+fam <- 
+  read_excel("C:/Datasul/embalagens.xlsx",
+             sheet = "Famílias") |> 
+  janitor::clean_names()
+
+fam <- 
+  fam |> 
+  rename(desc_fam = descricao,
+         un_fam = unp)
+
+fam <- 
+  fam |> 
+  mutate(familia = as.character(familia))
+
+emb <- 
+  emb |> 
+  mutate(familia = as.character(familia))
+
+emb <- 
+  emb |> 
+  left_join(fam, join_by(familia))
+emb <- 
+  emb |> 
+  select(ge, familia, desc_fam, un_fam, item, desc = descricao, un)
+
+emb |> write_csv("emb.csv")
 ```

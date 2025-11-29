@@ -16,8 +16,11 @@ mp_to_cd0209 <- function(df, out_file = "default.lst") {
 
   # Para importar matéria primas, vamos utilizar a listagem de
   # "Já Cadastrados" para avaliar se é uma nova inclusão ou uma atualização
-  ja_cadastrados <- read_excel(here("data", "jah_cadastrados.xlsx")) |>
-    janitor::clean_names() |>
+  source("R/ja-cadastrados.R")
+  ja_cadastrados <- read_ja_cadastrados()
+
+  ja_cadastrados <-
+    ja_cadastrados |>
     filter(!str_detect(item, "^I")) |>
     filter(!str_detect(item, "F")) |>
     select(item) |>
