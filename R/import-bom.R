@@ -6,24 +6,22 @@
 # tetart: 2 - contabiliza, 4 - despesa direta
 
 
-# f_to_cd0209 prepara um arquivo com componentes para serem importados em massa
+# goto_en0113 prepara um arquivo com componentes para serem importados em massa
 # components é um tibble com os campos:
-#       item,
-#       desc,
-#       grupo_estoque,
-#       fam_mat,
-#       fam_com,
-#       un,
-#       estabelecimento,
-#       cod_comp
+#
+# df deve ser um tibble construido como:
+# bom_mbb176 <-
+#   mbb176 |>                         # lista de peças
+#   left_join(s_itens) |>             #
+#   select(item, pseudo) |>           # apenas "item" e "pseudo" de s_itens
+#   left_join(bom, join_by(item == material_number))   # estrutura da bom
 # out_file é o nome do arquivo gerado
 #
 
 goto_en0113 <- function(df, out_file = "default.lst") {
 
-  df <- bom_vw246
     to_exp <-
-    df |>
+      df |>
     filter(!str_detect(bom_component, "^58")) |>
     mutate(
       tipo_trx = 1,

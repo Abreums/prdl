@@ -31,8 +31,7 @@ moldes <-
   left_join(itens |> select(item = tetenr, desc), join_by(item))
 
 moldes |> write_csv("moldes.csv")
-
-moldes |> filter(item == "I01716030001A") |> distinct(item, molde, machine) |> View()
+moldes |> View()
 
 itens |> filter(tetenr == 'I01716030001A') |> View()
 ```

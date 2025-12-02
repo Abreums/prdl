@@ -1,15 +1,8 @@
-# IMPORT ITENS CD0209
+# IMPORT ITENS goto_en0114
 
-# f_to_cd0209 prepara um arquivo com componentes para serem importados em massa
+# goto_en0114 prepara um arquivo com componentes para serem importados em massa
 # components é um tibble com os campos:
-#       item,
-#       desc,
-#       grupo_estoque,
-#       fam_mat,
-#       fam_com,
-#       un,
-#       estabelecimento,
-#       cod_comp
+
 # out_file é o nome do arquivo gerado
 #
 goto_en0114 <- function(df, out_file = "default.lst") {

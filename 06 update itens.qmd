@@ -152,3 +152,19 @@ source("R/import-mp.R")
 mp_to_cd0209(novos_mp, "novos-mp.lst")
 
 ```
+
+## FOX
+
+```{r}
+
+fox <- s_itens |> filter(str_detect(prj_sigla, "FOX"))
+
+fox_f <- fox |> select(item) |> pull()
+                         
+
+redo_fox <- 
+  ja_cadastrados |>
+  filter(item %in% fox_f) |> View()
+                         
+
+```

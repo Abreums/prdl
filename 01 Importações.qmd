@@ -102,10 +102,13 @@ precos  |> glimpse()
 ## Já Cadastrados
 
 ```{r}
-ja_cadastrados <- 
-  readxl::read_excel(here::here("data", "2025-10-27-jah_cadastrados.xlsx"),
-                     col_types = "text") |> 
-  janitor::clean_names() 
+source("R/ja-cadastrados.R")
+ja_cadastrados <- read_ja_cadastrados()
+  # readxl::read_excel(here::here("data", "2025-11-10-ja_cadastrados.xlsx"),
+  #                    col_types = "text") |> 
+  # janitor::clean_names() 
+
+
 
 cad_precos <- 
   ja_cadastrados |> 
