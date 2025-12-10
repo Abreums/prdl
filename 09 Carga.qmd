@@ -1,0 +1,32 @@
+---
+title: "09 Carga"
+author: "Simoldes"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(here)
+library(readxl)
+
+```
+
+## Inventário SPI SPB
+
+```{r}
+spi_carga <- here("data", "estoque spi.xlsx")
+spb_carga <- here("data", "estoque spb.xlsx")
+
+spi_dados <- readxl::read_excel(spi_carga) |> 
+  janitor::clean_names()
+spb_dados <- readxl::read_excel(spb_carga) |> 
+  janitor::clean_names()
+
+inventario <- rbind(spi_dados, spb_dados)
+inventario <- 
+  inventario |> 
+  mutate(estabelecimento = company)
+
+```
