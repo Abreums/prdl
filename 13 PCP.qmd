@@ -5,6 +5,22 @@ format: html
 editor: visual
 ---
 
+#### Onde queremos chegar:
+
+-   Ter um Planejamento com a geração de Ordens de Produção e Compras
+
+    -   Visualizar a gestão do limite de segurança das Matérias Primas, Semi e Acabados
+
+    -   Visualizar a Carga Máquina
+
+#### Passo a passo
+
+-   Precisa de malha?
+
+-   Cadastro de limites de segurança? É no APS ou no Datasul?
+
+-   ???
+
 ## Configuração do APS
 
 Configuração pelo db0101
