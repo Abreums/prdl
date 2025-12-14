@@ -20,7 +20,48 @@ library(gdata)
 
 ```
 
-## Já Cadastrados
+Precisamos atualizar os ambientes de PRD e TST com as informações dos inventários.
+
+#### Onde queremos chegar:
+
+-   Base atualizada com itens do inventário que não haviam sido cadastrados antes
+
+    -   Itens possuem famílias ajustadas
+
+        -   possivelmente incluindo novas famílias para MP, Semi e Acabados
+
+-   Itens com quantidades e valores atualizados
+
+-   Precisamos de uma listagem do que está sendo cadastrado para acompanhar estes itens e posteriormente identificar itens que não precisam estar na base porque não são mais utilizados.
+
+#### Passo a passo:
+
+1.  Recuperar os itens já cadastrados.
+
+2.  Ler o resultados dos inventários
+
+3.  Identificar os itens da diferença entre o inventário e os já cadastrados (separadamente para SPI e SPB)
+
+    1.  Verificar se as listas são diferentes (quando cadastrarmos novos itens vamos apenas alocar para o estoque do estabelecimento correto.
+    2.  Podemos usar os inventários para identificar se incorretamente cadastramos itens para 2 estabelecimentos e fazer o ajuste.
+    3.  Salvar a informação da diferença para verficações posteriores (pós-go-live)
+
+4.  Fazer carga de dados para os itens "novos"
+
+    1.  Separar carga por MP, Semi, Acabados
+        1.  Verificar famílias & criar novas famílias
+
+5.  Fazer carga de dados de estruturas e processos para semi & acabados (
+
+    1.  DÚVIDA SE DEVEMOS FAZER ISTO AGORA OU FAZER DURANTE O ANDAMENTO PÓS-GO-LIVE
+
+6.   Fazer carga de estoques e valores
+
+    1.  CE0000
+
+7.  TERMINADO!
+
+## 1. Já Cadastrados
 
 ```{r}
 source("R/ja-cadastrados.R")
@@ -30,83 +71,7 @@ ja_cadastrados <- read_ja_cadastrados(force = TRUE)
 ja_cadastrados |> distinct(fam_coml) |> View()
 ```
 
-## Teste de atualização
-
-```{r}
-
-df <- ja_cadastrados |> 
-  filter(item %in% c("1200517", "5212108", "5212109", "5800322", 
-                     "5800323", "F01009043010A", 
-                     "F01009043013A", "I02119006001A", "I03523002001A" 
-                     ))
-
-source("R/import-mp.R")
-
-df <- ja_cadastrados |> 
-  filter(ge == "30")
-
-df <- 
-  df |> 
-    mutate(tipo_trx = 2) |>
-    mutate(descricao = str_replace_all(descricao, "[[:punct:]]", "")) |>
-    mutate(descricao = iconv(descricao,to="ASCII//TRANSLIT")) |>
-    mutate(inf_compl = str_replace_all(inf_compl, "[[:punct:]]", "")) |>
-    mutate(inf_compl = iconv(inf_compl,to="ASCII//TRANSLIT")) |>
-    mutate(situacao = ifelse(str_detect(situacao, "Ativo"), 1, 2)) |>
-  mutate(tipo_controle = case_when(
-    ge == "70" ~ 1,  # 1 = Físico
-    ge == "40" & familia == "4059000" ~ 4,  # 4 = Débito Direto
-    ge == "30" ~ 2,  # 2 = Total
-    ge == "20" ~ 2,  # 
-    ge == "10" ~ 2,
-    TRUE ~ 2
-  )) |>
-  mutate(aplicacao = ifelse(ge == "99", 
-                            1,  # (1-Serviço
-                            2   # 2-Material) 
-                            ))  |> 
-mutate(dt_impl = "02022025",
-           dt_lib  = "02022025",
-           folha = "",
-           lote_econ = "",
-           info = "",
-           imagem = "",
-           narrativa = "",
-           estabelecimento = "102"
-    ) |>
-  mutate(fam_coml = case_when(
-    ge == "70" ~ "EMB RET",
-    ge == "40" ~ "EMB",
-    ge == "30" ~ "MP",
-    TRUE ~ fam_coml
-  )) |> 
-    select(
-      tipo_trx,
-      item,
-      descricao,
-      ge,
-      familia,
-      fam_coml,
-      un,
-      estabelecimento,
-      situacao,
-      dt_impl,
-      dt_lib,
-      folha,
-      tipo_controle,
-      aplicacao,
-      lote_econ,
-      codigo_complementar,
-      inf_compl,
-      imagem,
-      narrativa
-    )
-
-update_cd0209(df, "cd0209_GE30.lst")
-
-```
-
-# Importar Inventário
+## 2. Importar Inventário
 
 ## Ler Inventário
 
@@ -140,7 +105,7 @@ inv_spb |> glimpse()
 
 ```
 
-## Diferença entre inventários e peças cadastradas
+## 3. Diferença entre inventários e peças cadastradas
 
 ### SPI
 
@@ -166,6 +131,79 @@ itens <- read_itens_summary()
 
 ```
 
+## 4. Atualização
+
+```{r}
+df <- 
+  ja_cadastrados |>    
+  filter(item %in% c("1200517", "5212108", "5212109", "5800322",
+                     "5800323", "F01009043010A",
+                     "F01009043013A", "I02119006001A", "I03523002001A"))
+
+source("R/import-mp.R")  
+df <- 
+  ja_cadastrados |>    
+  filter(ge == "30")  
+
+df <-    
+  df |>      
+  mutate(tipo_trx = 2) |>     
+  mutate(descricao = str_replace_all(descricao, "[[:punct:]]", "")) |>     
+  mutate(descricao = iconv(descricao,to="ASCII//TRANSLIT")) |>     
+  mutate(inf_compl = str_replace_all(inf_compl, "[[:punct:]]", "")) |>     
+  mutate(inf_compl = iconv(inf_compl,to="ASCII//TRANSLIT")) |>     
+  mutate(situacao = ifelse(str_detect(situacao, "Ativo"), 1, 2)) |>   
+  mutate(tipo_controle = case_when(     
+    ge == "70" ~ 1,  # 1 = Físico     
+    ge == "40" & familia == "4059000" ~ 4,  # 4 = Débito Direto     
+    ge == "30" ~ 2,  # 2 = Total     
+    ge == "20" ~ 2,  #      
+    ge == "10" ~ 2,     
+    TRUE ~ 2   )) |>   
+  mutate(aplicacao = ifelse(ge == "99", 
+                            1,  # (1-Serviço
+                            2   # 2-Material)
+                            ))  |>  
+  mutate(dt_impl = "02022025",            
+         dt_lib  = "02022025",            
+         folha = "",            
+         lote_econ = "",            
+         info = "",            
+         imagem = "",            
+         narrativa = "",            
+         estabelecimento = "102"     ) |>   
+  mutate(fam_coml = case_when(
+    ge == "70" ~ "EMB RET",     
+    ge == "40" ~ "EMB",     
+    ge == "30" ~ "MP",     
+    TRUE ~ fam_coml   )) |>      
+  select(       
+    tipo_trx,       
+    item,       
+    descricao,       
+    ge,       
+    familia,       
+    fam_coml,       
+    un,       
+    estabelecimento,       
+    situacao,       
+    dt_impl,       
+    dt_lib,       
+    folha,       
+    tipo_controle,       
+    aplicacao,       
+    lote_econ,       
+    codigo_complementar,       
+    inf_compl,       
+    imagem,       
+    narrativa)  
+
+update_cd0209(df, "cd0209_GE30.lst") 
+
+```
+
+# 
+
 # Mistura - Datasul
 
 ## Produção Repetitiva
@@ -177,3 +215,4 @@ Variações de consumo são gerenciados com Rateio de Diferenças. Fazendo ajust
 -   Módulo de Produção
 
 -   Módulo de Chão de Fábrica
+
