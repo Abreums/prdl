@@ -44,9 +44,9 @@
 #
 
 # FORNECER TIBBLE COMO ABAIXO:
-#
+
 # teste <- tibble(
-#   item = "f00417003002a",
+#   item = "F00425004001A",
 #   brancos_3 = "   ",
 #   deposito = "ALX",
 #   lote = "1020000000",
@@ -74,6 +74,7 @@
 #
 #
 # to_ce0000(teste)
+
 
 
       # IMPORTAR SALDOS CE0000
