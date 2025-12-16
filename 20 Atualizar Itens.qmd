@@ -72,6 +72,7 @@ ja_cadastrados |> distinct(fam_coml) |> View()
 
 source("R/read-itens.R")
 s_itens <- read_itens_summary()
+
 ```
 
 ## 2. Importar Inventário
@@ -404,3 +405,174 @@ Variações de consumo são gerenciados com Rateio de Diferenças. Fazendo ajust
 -   Módulo de Produção
 
 -   Módulo de Chão de Fábrica
+
+## Novos William
+
+```{r}
+
+
+wil_file <- here::here("data", "LITA DE PNS_1003_SÃO BERNADO DO CAMPO_ANCHIETA.xlsx")
+
+wil <- 
+  readxl::read_excel(wil_file) |> 
+  janitor::clean_names()
+  
+nao_cadastrados <- 
+  wil |> 
+  anti_join(ja_cadastrados, join_by(numero_artigo == item))
+
+novos_wil <- nao_cadastrados
+
+novos_wil <- 
+  novos_wil |> 
+  rename(item = numero_artigo)
+
+novos_wil <- 
+  novos_wil |> 
+  left_join(s_itens)
+novos_wil <- get_F_or_I_family_from_xpert_data(novos_wil)
+#novos_fi |> View()
+
+novos_wil <-
+  novos_wil |> 
+  mutate(fam_mat = ifelse(!is.na(fam_mat), fam_mat, "UNKN")) |> 
+  mutate(fam_com = ifelse(!is.na(fam_com), fam_com, "UNKN")) |> 
+  mutate(estabelecimento = ifelse(estabelecimento == "SPI", "102", "103"))
+
+novos_wil <-    
+  novos_wil |>      
+  mutate(tipo_trx = 1) |>     
+  mutate(desc = str_replace_all(str_c(desc, " ", desc2), "[[:punct:]]", "")) |>    
+  mutate(desc = iconv(desc, to="ASCII//TRANSLIT")) |>     
+  mutate(cod_comp = str_replace_all(cod_comp, "[[:punct:]]", "")) |>   
+  mutate(cod_comp = str_replace_all(cod_comp, " ", "")) |> 
+  mutate(cod_comp = iconv(cod_comp,to="ASCII//TRANSLIT")) |>     
+  mutate(situacao = ifelse(str_detect(fam_mat, "UNKN"), 2, 1)) |>  # 1 ATIVO 2 INATIVO  
+  mutate(tipo_controle = case_when(     
+    grupo_de_estoque == "70" ~ 1,  # 1 = Físico     
+    grupo_de_estoque == "40" & fam_mat == "4059000" ~ 4,  # 4 = Débito Direto     
+    grupo_de_estoque == "30" ~ 2,  # 2 = Total     
+    grupo_de_estoque == "20" ~ 2,  #      
+    grupo_de_estoque == "10" ~ 2,     
+    TRUE ~ 2   )) |>   
+  mutate(aplicacao = ifelse(grupo_de_estoque == "99", 
+                            1,  # (1-Serviço
+                            2   # 2-Material)
+                            ))  |>  
+  mutate(dt_impl = "02022025",            
+         dt_lib  = "02022025",            
+         folha = "",            
+         lote_econ = "",            
+         inf_comp = "",            
+         imagem = "",            
+         narrativa = "") |>   
+  mutate(fam_com = case_when(
+    grupo_de_estoque == "70" ~ "EMB RET",     
+    grupo_de_estoque == "40" ~ "EMB",     
+    grupo_de_estoque == "30" ~ "MP",     
+    TRUE ~ fam_com   )) |>      
+  mutate(desc = ifelse(str_length(desc) < 60, desc, str_sub(desc, 1, 59))) |> 
+  mutate(cod_comp = ifelse(is.na(cod_comp), " ", cod_comp)) |> 
+  mutate(cod_comp = ifelse(str_detect(cod_comp, "NA"), " ", cod_comp)) |> 
+  mutate(un = ifelse(is.na(un), "PC", un)) |> 
+  mutate(desc = ifelse(is.na(desc), "UNKNOW", desc)) |> 
+  select(       
+    tipo_trx,       
+    item,       
+    desc,       
+    grupo_de_estoque,       
+    fam_mat,       
+    fam_com,       
+    un,       
+    estabelecimento,       
+    situacao,       
+    dt_impl,       
+    dt_lib,       
+    folha,       
+    tipo_controle,       
+    aplicacao,       
+    lote_econ,       
+    cod_comp,      
+    inf_comp,       
+    imagem,       
+    narrativa)  
+
+update_cd0209(novos_wil, "novos_sbc.lst") 
+```
+
+## Atualiza especial 1 item
+
+```{r}
+
+um_item <- 
+  novos_wil |> 
+  filter(item == "F01716003058A")
+
+um_item <- 
+  um_item |> 
+  mutate(desc = "PNL ELE DD VIRTUS ENTRY",
+         estabelecimento = "102",
+         fam_mat = "VWMQB10",
+         fam_com = "VW",
+         cod_comp = "6EA 867 006 H  EOA")
+
+um_item <-    
+  um_item |>      
+  mutate(tipo_trx = 1) |>     
+  mutate(desc = str_replace_all(str_c(desc), "[[:punct:]]", "")) |>    
+  mutate(desc = iconv(desc, to="ASCII//TRANSLIT")) |>     
+  mutate(cod_comp = str_replace_all(cod_comp, "[[:punct:]]", "")) |>   
+  mutate(cod_comp = str_replace_all(cod_comp, " ", "")) |> 
+  mutate(cod_comp = iconv(cod_comp,to="ASCII//TRANSLIT")) |>     
+  mutate(situacao = ifelse(str_detect(fam_mat, "UNKN"), 2, 1)) |>  # 1 ATIVO 2 INATIVO  
+  mutate(tipo_controle = case_when(     
+    grupo_de_estoque == "70" ~ 1,  # 1 = Físico     
+    grupo_de_estoque == "40" & fam_mat == "4059000" ~ 4,  # 4 = Débito Direto     
+    grupo_de_estoque == "30" ~ 2,  # 2 = Total     
+    grupo_de_estoque == "20" ~ 2,  #      
+    grupo_de_estoque == "10" ~ 2,     
+    TRUE ~ 2   )) |>   
+  mutate(aplicacao = ifelse(grupo_de_estoque == "99", 
+                            1,  # (1-Serviço
+                            2   # 2-Material)
+                            ))  |>  
+  mutate(dt_impl = "02022025",            
+         dt_lib  = "02022025",            
+         folha = "",            
+         lote_econ = "",            
+         inf_comp = "",            
+         imagem = "",            
+         narrativa = "") |>   
+  mutate(fam_com = case_when(
+    grupo_de_estoque == "70" ~ "EMB RET",     
+    grupo_de_estoque == "40" ~ "EMB",     
+    grupo_de_estoque == "30" ~ "MP",     
+    TRUE ~ fam_com   )) |>      
+  mutate(desc = ifelse(str_length(desc) < 60, desc, str_sub(desc, 1, 59))) |> 
+  mutate(cod_comp = ifelse(is.na(cod_comp), " ", cod_comp)) |> 
+  mutate(cod_comp = ifelse(str_detect(cod_comp, "NA"), " ", cod_comp)) |> 
+  mutate(un = ifelse(is.na(un), "PC", un)) |> 
+  mutate(desc = ifelse(is.na(desc), "UNKNOW", desc)) |> 
+  select(       
+    tipo_trx,       
+    item,       
+    desc,       
+    grupo_de_estoque,       
+    fam_mat,       
+    fam_com,       
+    un,       
+    estabelecimento,       
+    situacao,       
+    dt_impl,       
+    dt_lib,       
+    folha,       
+    tipo_controle,       
+    aplicacao,       
+    lote_econ,       
+    cod_comp,      
+    inf_comp,       
+    imagem,       
+    narrativa)  
+
+update_cd0209(um_item, "um_item.lst") 
+```
