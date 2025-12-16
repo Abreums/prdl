@@ -69,6 +69,9 @@ source("R/ja-cadastrados.R")
 ja_cadastrados <- read_ja_cadastrados(force = TRUE)
 
 ja_cadastrados |> distinct(fam_coml) |> View()
+
+source("R/read-itens.R")
+s_itens <- read_itens_summary()
 ```
 
 ## 2. Importar Inventário
@@ -107,8 +110,6 @@ inv_spb |> glimpse()
 
 ## 3. Diferença entre inventários e peças cadastradas
 
-### SPI
-
 ```{r}
 novos_spb <- 
   inv_spb |> 
@@ -126,8 +127,195 @@ novos_spi <-
 
 novos <- rbind(novos_spb, novos_spi)
 
+
+
+```
+
+## 4.1 Upload novos itens - Acabados e Semi-acabados
+
+#### Incluir família
+
+```{r}
+source("R/import-F.R")
+source("R/import-mp.R")
+novos_fi <- 
+  novos |> 
+  filter(str_detect(item, "^F") | str_detect(item, "^I"))
+
 source("R/read-itens.R")
-itens <- read_itens_summary()
+s_itens <- read_itens_summary()
+novos_fi <- 
+  novos_fi |> 
+  left_join(s_itens, join_by(item))
+
+novos_fi <- get_F_or_I_family_from_xpert_data(novos_fi)
+#novos_fi |> View()
+
+novos_fi <-
+  novos_fi |> 
+  mutate(fam_mat = ifelse(!is.na(fam_mat), fam_mat, "UNKN")) |> 
+  mutate(fam_com = ifelse(!is.na(fam_com), fam_com, "UNKN"))
+
+
+```
+
+## carga
+
+```{r}
+
+novos_fi <-    
+  novos_fi |>      
+  mutate(tipo_trx = 1) |>     
+  mutate(desc = str_replace_all(str_c(desc, " ", desc2), "[[:punct:]]", "")) |>     
+  mutate(desc = iconv(desc, to="ASCII//TRANSLIT")) |>     
+  mutate(cod_comp = str_replace_all(cod_comp, "[[:punct:]]", "")) |>   
+  mutate(cod_comp = str_replace_all(cod_comp, " ", "")) |> 
+  mutate(cod_comp = iconv(cod_comp,to="ASCII//TRANSLIT")) |>     
+  mutate(situacao = ifelse(str_detect(fam_mat, "UNKN"), 2, 1)) |>  # 1 ATIVO 2 INATIVO  
+  mutate(tipo_controle = case_when(     
+    grupo_de_estoque == "70" ~ 1,  # 1 = Físico     
+    grupo_de_estoque == "40" & fam_mat == "4059000" ~ 4,  # 4 = Débito Direto     
+    grupo_de_estoque == "30" ~ 2,  # 2 = Total     
+    grupo_de_estoque == "20" ~ 2,  #      
+    grupo_de_estoque == "10" ~ 2,     
+    TRUE ~ 2   )) |>   
+  mutate(aplicacao = ifelse(grupo_de_estoque == "99", 
+                            1,  # (1-Serviço
+                            2   # 2-Material)
+                            ))  |>  
+  mutate(dt_impl = "02022025",            
+         dt_lib  = "02022025",            
+         folha = "",            
+         lote_econ = "",            
+         inf_comp = "",            
+         imagem = "",            
+         narrativa = "",   
+         estabelecimento = estabelecimento.x) |>   
+  mutate(fam_com = case_when(
+    grupo_de_estoque == "70" ~ "EMB RET",     
+    grupo_de_estoque == "40" ~ "EMB",     
+    grupo_de_estoque == "30" ~ "MP",     
+    TRUE ~ fam_com   )) |>      
+  mutate(desc = ifelse(str_length(desc) < 60, desc, str_sub(desc, 1, 59))) |> 
+  mutate(cod_comp = ifelse(is.na(cod_comp), " ", cod_comp)) |> 
+  mutate(cod_comp = ifelse(str_detect(cod_comp, "NA"), " ", cod_comp)) |> 
+  mutate(un = ifelse(is.na(un), "PC", un)) |> 
+  mutate(desc = ifelse(is.na(desc), "UNKNOW", desc)) |> 
+  select(       
+    tipo_trx,       
+    item,       
+    desc,       
+    grupo_de_estoque,       
+    fam_mat,       
+    fam_com,       
+    un,       
+    estabelecimento,       
+    situacao,       
+    dt_impl,       
+    dt_lib,       
+    folha,       
+    tipo_controle,       
+    aplicacao,       
+    lote_econ,       
+    cod_comp,      
+    inf_comp,       
+    imagem,       
+    narrativa)  
+
+update_cd0209(novos_fi, "novos_fi.lst") 
+
+```
+
+## 4.2 Matéria Prima e Componentes
+
+#### incluir família
+
+```{r}
+source("R/import-mp.R")
+itens <- read_itens()
+itens |> filter(str_detect(tetenr, "^P"))
+
+novos_mp <- 
+  novos |> 
+  filter(!str_detect(item, "^F")) |>
+  filter(!str_detect(item, "^I"))
+
+novos_estranhos <- 
+  novos_mp |> 
+  filter(str_detect(item, "^[:alpha:]"))
+
+novos_mp <- 
+  novos_mp |> 
+  filter(str_detect(item, "^[:digit:]"))
+
+novos_mp <- 
+  novos_mp |> 
+  left_join(s_itens, join_by(item))
+
+novos_mp <-    
+  novos_mp |>    
+  select(-estabelecimento.y) |> 
+  dplyr::rename(estabelecimento = estabelecimento.x) |> 
+  mutate(pseudo = ifelse(is.na(pseudo), "N", pseudo))
+
+novos_mp <- get_mp_family(novos_mp)
+
+novos_mp <- 
+  novos_mp |> 
+  mutate(tipo_trx = 1) |>     
+  mutate(desc = str_replace_all(str_c(desc, " ", desc2), "[[:punct:]]", "")) |>   
+  mutate(desc = iconv(desc, to="ASCII//TRANSLIT")) |>     
+  mutate(cod_comp = " ") |> 
+  # mutate(cod_comp = str_replace_all(cod_comp, "[[:punct:]]", "")) |>   
+  # mutate(cod_comp = str_replace_all(cod_comp, " ", "")) |> 
+  # mutate(cod_comp = iconv(cod_comp, to="ASCII//TRANSLIT")) |>     
+  mutate(situacao = "1") |>   
+  mutate(tipo_controle = case_when(     
+    grupo_de_estoque == "70" ~ 1,  # 1 = Físico     
+    grupo_de_estoque == "40" & fam_mat == "4059000" ~ 4,  # 4 = Débito Direto     
+    grupo_de_estoque == "30" ~ 2,  # 2 = Total     
+    grupo_de_estoque == "20" ~ 2,  #      
+    grupo_de_estoque == "10" ~ 2,     
+    TRUE ~ 2   )) |>   
+  mutate(aplicacao = ifelse(grupo_de_estoque == "99", 
+                            1,  # (1-Serviço
+                            2   # 2-Material)
+                            ))  |>  
+  mutate(dt_impl = "02022025",            
+         dt_lib  = "02022025",            
+         folha = "",            
+         lote_econ = "",            
+         inf_comp = "",            
+         imagem = "",            
+         narrativa = "") |>  
+  mutate(desc = ifelse(str_length(desc) < 60, desc, str_sub(desc, 1, 59))) |> 
+  mutate(cod_comp = ifelse(is.na(cod_comp), " ", cod_comp)) |> 
+  mutate(cod_comp = ifelse(str_detect(cod_comp, "NA"), " ", cod_comp)) |> 
+  mutate(un = ifelse(is.na(un), "PC", un)) |> 
+  mutate(desc = ifelse(is.na(desc), "UNKNOW", desc)) |> 
+  mutate(un = ifelse(un == "ROLLS", "RL", un)) |> 
+    select(       
+    tipo_trx,       
+    item,       
+    desc,       
+    grupo_de_estoque,      
+    fam_mat,       
+    fam_com,       
+    un,       
+    estabelecimento,       
+    situacao,       
+    dt_impl,       
+    dt_lib,       
+    folha,       
+    tipo_controle,       
+    aplicacao,       
+    lote_econ,       
+    cod_comp,       
+    inf_comp,       
+    imagem,       
+    narrativa)  
+
+update_cd0209(novos_mp, "novos_mp.lst") 
 
 ```
 
@@ -150,7 +338,8 @@ df <-
   mutate(tipo_trx = 2) |>     
   mutate(descricao = str_replace_all(descricao, "[[:punct:]]", "")) |>     
   mutate(descricao = iconv(descricao,to="ASCII//TRANSLIT")) |>     
-  mutate(inf_compl = str_replace_all(inf_compl, "[[:punct:]]", "")) |>     
+  mutate(inf_compl = str_replace_all(inf_compl, "[[:punct:]]", "")) |>   
+  mutate(inf_compl = str_replace_all(inf_compl, " ", "")) |> 
   mutate(inf_compl = iconv(inf_compl,to="ASCII//TRANSLIT")) |>     
   mutate(situacao = ifelse(str_detect(situacao, "Ativo"), 1, 2)) |>   
   mutate(tipo_controle = case_when(     
@@ -215,4 +404,3 @@ Variações de consumo são gerenciados com Rateio de Diferenças. Fazendo ajust
 -   Módulo de Produção
 
 -   Módulo de Chão de Fábrica
-

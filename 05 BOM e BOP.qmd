@@ -1,0 +1,249 @@
+---
+title: "05 BOM e BOP"
+author: "Simoldes"
+format: html
+editor: visual
+---
+
+## BOM
+
+```{r}
+source("R/read-bom.R")
+
+# file_bom <- here::here("data", "BOM 2025-06-11.xlsx")
+# file_bom <- here::here("data", "BOM 2025-09-02.xlsx")
+file_bom <- here::here("data", "BOM 2025-11-07.xlsx")
+bom <- read_bom(file_bom)
+
+## Alguns itens não possuem BOM registrada!
+## Pendente decidir o que fazer com estes!
+ja_cadastrados |>
+  filter(str_detect(item, "^[F,I]")) |> 
+  anti_join(bom, join_by(item == material_number)) |> 
+  View()
+
+
+```
+
+## BOP
+
+```{r}
+source("R/read-bop.R")
+
+#file_bop_spi <- here::here("data", "BOP SPI 2025-07-20.xlsx")
+#file_bop_spb <- here::here("data", "BOP SPB 2025-07-20.xlsx")
+file_bop_spi <- here::here("data", "SPI routing 2025-11-12.xlsx")
+file_bop_spb <- here::here("data", "SPB routing 2025-11-12.xlsx")
+
+bop_spi <- read_bop(file_bop_spi)
+bop_spb <- read_bop(file_bop_spb)
+
+bop <- rbind(bop_spi, bop_spb)
+
+bop |> glimpse()
+bop |> View()
+
+# as operações padrdão deveriam ser apenas
+bop |> distinct(description)
+  
+  
+
+
+```
+
+Para cada item vamos identificar a BOM e BOP dele
+
+```{r}
+
+itens_fi <- 
+  ja_cadastrados |> 
+  mutate(item_bom = map(item, ~ get_bom_from_id(.x, bom))) |> 
+  mutate(item_bop = map(item, ~ get_bop_from_id(.x, bop))) |> 
+  filter(!is.na(item_bom)) |> 
+  filter(!is.na(item_bop))
+
+
+itens_fi <- 
+  itens_fi |> 
+  mutate(num_itens = map(item_bom, ~ nrow(.[1]))) |> 
+  mutate(num_itens = unlist(num_itens))
+
+itens_fi |> View()
+
+itens_fi <- 
+  itens_fi |> 
+  mutate(semiacabado = map(item_bom, ~ get_semi_from_bom(.x))) |> 
+  mutate(mp = map(item_bom, ~ get_mp_from_bom(.x)))
+
+# PARA RECUPERAR (MAIS PARA BAIXO)
+itens_fi |> write_rds("data/itens_fi_bom_bop.rds")
+itens_fi <- read_rds("data/itens_fi_bom_bop.rds")
+
+
+```
+
+Obtém a lista de intermediários e a lista de MP & Comp para cada item:
+
+```{r}
+{r}
+
+f_estab |> View()
+
+semi_geral <- 
+  f_estab |> 
+  select(item, semiacabado)
+
+semi_geral <- 
+  semi_geral |> 
+  unnest(semiacabado) |> 
+  rename(semi = bom_component) |> 
+  distinct(item, semi)
+
+ja_cadastrados <- 
+  readxl::read_excel(here::here("data", "jah_cadastrados.xlsx")) |> 
+  janitor::clean_names() |> 
+  select(item, familia, fam_coml)
+
+semi_geral <- 
+  semi_geral |> 
+  left_join(ja_cadastrados, join_by(item))
+
+semi_geral <- 
+  semi_geral |> 
+  mutate(familia = str_replace(familia, "10", "20")) |> 
+  filter(!is.na(semi), !is.na(familia)) |> 
+  select(item = semi, fam_mat = familia, fam_com = fam_coml)
+
+semi_geral |> View()
+
+
+```
+
+```{r}
+# ##old
+# i_bom <- bom |> filter(str_detect(material_number, "^I"))
+# f_bom <- bom |> filter(str_detect(material_number, "^F"))
+# 
+# pseudo <- 
+#   s_itens |> 
+#   select(item, pseudo) |> 
+#   group_by(item) |> 
+#   summarise_all(first) |> 
+#   ungroup()
+# 
+# only_this <- 
+#   s_itens |> 
+#   distinct(item)
+# 
+# vw246 <- 
+#   ja_cadastrados |> 
+#   filter(str_detect(familia, "^VW246"))
+# 
+# bom_vw246 <- 
+#   vw246 |> 
+#   select(item) |> 
+#   left_join(bom, join_by(item == material_number))
+
+pseudo <-
+  s_itens |>
+  select(item, pseudo) |>
+  group_by(item) |>
+  summarise_all(first) |>
+  ungroup() |> 
+  select(item, fantasma = pseudo)
+
+fam_com <- 
+  ja_cadastrados |>
+  distinct(fam_coml) |> 
+  filter(!is.na(fam_coml)) |> 
+  filter(!str_detect(fam_coml, "^EMB")) |> 
+  filter(!str_detect(fam_coml, "^MP")) |> 
+  filter(!str_detect(fam_coml, "SUCATA")) |> 
+  pull(fam_coml)
+
+source("R/import-bom.R")
+
+make_en0113 <- function(fam_com) {
+  df <- 
+    ja_cadastrados |>  
+    filter(str_detect(fam_coml, fam_com)) |>
+    select(item) |> 
+    left_join(bom, join_by(item == material_number)) |> 
+    left_join(pseudo) 
+
+  goto_en0113(df, sprintf("bom_%s.lst", str_to_lower(fam_com)))
+}
+map(fam_com, make_en0113)
+
+
+
+```
+
+## bop
+
+```{r}
+
+# IMPORTAR PROCESSO
+fam_com <- 
+  ja_cadastrados |>
+  distinct(fam_coml) |> 
+  filter(!is.na(fam_coml)) |> 
+  filter(!str_detect(fam_coml, "^EMB")) |> 
+  filter(!str_detect(fam_coml, "^MP")) |> 
+  filter(!str_detect(fam_coml, "SUCATA")) |> 
+  pull(fam_coml)
+
+source("R/import-bop.R")
+
+make_en0114 <- function(fam_com) {
+  df <- 
+    ja_cadastrados |>  
+    filter(str_detect(fam_coml, fam_com)) |>
+    select(item) |> 
+    left_join(bop, join_by(item == part_number)) |> 
+    group_by(firm, item, description_1, description_2, description) |> 
+    summarise_all(first) |> 
+    ungroup() |> 
+    filter(!is.na(description))
+
+  goto_en0114(df, sprintf("bop_%s.lst", str_to_lower(fam_com)))
+}
+map(fam_com, make_en0114)
+
+
+# #old
+# bop_rn3 <- 
+#   rn3 |> 
+#   select(item) |> 
+#   left_join(bop, join_by(item == part_number)) |> 
+#   group_by(firm, item, description_1, description_2, description) |> 
+#   summarise_all(first) |> 
+#   ungroup()|> 
+#   filter(!is.na(description))
+# 
+# source("R/import-bop.R")
+# goto_en0114(bop_rn3, "bop_rn3.lst")
+# 
+# mp <-
+#   itens |>
+#   filter(!str_detect(item, "^E1")) |>
+#   filter(!str_detect(item, "^E2")) |>
+#   filter(!str_detect(item, "^F0")) |>
+#   filter(!str_detect(item, "^FA")) |>
+#   filter(!str_detect(item, "^IO")) |>
+#   filter(!str_detect(item, "^LM")) |>
+#   filter(!str_detect(item, "^LP")) |>
+#   filter(!str_detect(item, "^MA")) |>
+#   filter(!str_detect(item, "^MO")) |>
+#   filter(!str_detect(item, "^R1")) |>
+#   filter(!str_detect(item, "^R2")) |>
+#   filter(!str_detect(item, "^SE")) |>
+#   filter(!str_detect(item, "^SP")) |>
+#   filter(!str_detect(item, "^V1")) |>
+#   select(item, xp_temagr, xp_mat_group_desc, desc) |>
+#   filter(!str_detect(item, "^F")) |>    
+#   filter(!str_detect(item, "^I")) |>    
+#   filter(!str_detect(item, "^SP"))
+# 
+
+```

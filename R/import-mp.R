@@ -1,3 +1,41 @@
+
+get_mp_family <- function(df){
+  df <-
+    df |>
+    mutate(fam_com = "MP") |>
+    mutate(grupo_de_estoque = case_when(
+      str_detect(item, "^56") ~ "70",
+      str_detect(item, "^58") ~ "70",
+      str_detect(item, "^77") ~ "70",
+      str_detect(item, "^51") ~ "40",
+      str_detect(item, "^52") ~ "40",
+      str_detect(item, "^53") ~ "40",
+      str_detect(item, "^59") ~ "40",
+      str_detect(item, "^61") ~ "40",
+      str_detect(item, "^62") ~ "40",
+      str_detect(item, "^63") ~ "40",
+      TRUE ~ "30"
+    )) |>
+    mutate(fam_mat = str_c(grupo_de_estoque, str_sub(item, 1, 2), "000")) |>
+    mutate(fam_mat = case_when(
+      str_detect(fam_mat, "^3012") ~ "3011000",
+      str_detect(fam_mat, "^3031") ~ "UNKN",
+      str_detect(fam_mat, "^3046") ~ "UNKN",
+      str_detect(fam_mat, "^3072") ~ "UNKN",
+      str_detect(fam_mat, "^3074") ~ "UNKN",
+      str_detect(fam_mat, "^4052") ~ "4051000",
+      str_detect(fam_mat, "^4053") ~ "4051000",
+      str_detect(fam_mat, "^4059") ~ "4059000",
+      str_detect(fam_mat, "^406") ~  "4051000",
+      TRUE ~ fam_mat
+      )) |>
+    mutate(fam_com = case_when(
+      str_detect(grupo_de_estoque, "^40") ~ "EMB",
+      str_detect(grupo_de_estoque, "^70") ~ "EMB RET",
+      TRUE ~ "MP"
+    ))
+}
+
 # IMPORT ITENS CD0209
 
 # mp_to_cd0209 prepara um arquivo com componentes para serem importados em massa
@@ -30,48 +68,14 @@
 #
 mp_to_cd0209 <- function(df, out_file = "default.lst") {
 
-  # Para importar matéria primas, vamos utilizar a listagem de
-  # "Já Cadastrados" para avaliar se é uma nova inclusão ou uma atualização
-  source("R/ja-cadastrados.R")
-  ja_cadastrados <- read_ja_cadastrados()
-
-  ja_cadastrados <-
-    ja_cadastrados |>
-    filter(!str_detect(item, "^I")) |>
-    filter(!str_detect(item, "^F")) |>
-    select(item) |>
-    mutate(trx = 2)
-
-  df <-
-    df |>
-    left_join(ja_cadastrados, join_by(item)) |>
-    mutate(trx = ifelse(is.na(trx), 1, trx)) |>
-    mutate(desc = str_replace_all(desc, "[[:punct:]]", "")) |>
-    mutate(desc = iconv(desc,to="ASCII//TRANSLIT"))
-
-
+  df <- novos_mp
   to_exp <-
     df |>
-    mutate(
-      tipo_trx = trx,
-      situacao = 1,
-      dt_impl = "02022025",
-      dt_lib = "02022025",
-      folha = "",
-      tipo_controle = ifelse(grupo_estoque == "80", 4, 2),
-      aplicacao = ifelse(grupo_estoque == "90", 1, 2),
-      lote_econ = "",
-      info = "",
-      imagem = "",
-      narrativa = "",
-      fam_com = "MP",
-      estabelecimento = ifelse(estabelecimento == "SPI", "102", "103")
-    ) |>
     select(
       tipo_trx,
       item,
       desc,
-      grupo_estoque,
+      grupo_de_estoque,
       fam_mat,
       fam_com,
       un,
@@ -84,7 +88,7 @@ mp_to_cd0209 <- function(df, out_file = "default.lst") {
       aplicacao,
       lote_econ,
       cod_comp,
-      info,
+      inf_comp,
       imagem,
       narrativa
     )
@@ -184,7 +188,7 @@ mp_to_cd0209 <- function(df, out_file = "default.lst") {
 
 update_cd0209 <- function(df, out_file = "cd0209.lst") {
 
-   df <- as.data.frame(df)
+   df <- as.data.frame(novos_mp)
 
   # * = obrigatório
   cd0209_fix_width <- c(
